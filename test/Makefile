@@ -10,6 +10,7 @@ test:
 	  make -C {} random_nodep \
 	  ::: \
 	  WordBitSet \
+	  DWordBitSet \
 
 .PHONY: clean
 clean:

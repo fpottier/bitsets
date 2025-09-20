@@ -12,6 +12,6 @@
 
 module T =
   Setup.Make(struct
-    include Bitsets.WordBitSet
-    let name = "Bitsets.WordBitSet"
+    include Bitsets.DWordBitSet
+    let name = "Bitsets.DWordBitSet"
   end)
