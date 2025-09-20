@@ -32,6 +32,9 @@ let rev_elements s =
 let minimum =
   min_elt
 
+let maximum =
+  max_elt
+
 let compare_minimum s1 s2 =
   match is_empty s1, is_empty s2 with
   | true, true ->
@@ -43,5 +46,35 @@ let compare_minimum s1 s2 =
   | false, false ->
       Int.compare (minimum s1) (minimum s2)
 
+(*
+let print_set f s =
+  Printf.fprintf f "[";
+  iter (fun i -> Printf.fprintf f "%d; " i) s;
+  Printf.fprintf f "]"
+
+let print_sets f ss =
+  List.iter (print_set f) ss
+ *)
+
+(* [is_slndos ss] determines whether [ss] is a sorted list of disjoint
+   non-overlapping sets, that is, a suitable argument for the function
+   [sorted_union]. *)
+
+let rec nonoverlapping1 s1 ss =
+  match ss with [] -> true | s :: ss -> disjoint s1 s && nonoverlapping1 s ss
+
+let nonoverlapping ss =
+  match ss with [] -> true | s :: ss -> nonoverlapping1 s ss
+
+let is_slndos ss =
+  List.for_all nonempty ss &&
+  List.sort compare_minimum ss = ss &&
+  nonoverlapping ss
+
 let sorted_union ss =
+  assert (is_slndos ss);
   List.fold_left union empty ss
+
+let above x s =
+  let _, _, s = split x s in
+  s

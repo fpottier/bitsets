@@ -47,6 +47,20 @@ let t =
 let elt =
   lt C.bound
 
+(* The function [prepare], which we define on both sides (reference and
+   candidate), transforms a list of sets into a a sorted list of disjoint
+   non-overlapping sets. Such a list forms a suitable argument for the
+   function [sorted_union], which we wish to test. *)
+
+(* Ideally, we should print the source code of [prepare] on the candidate
+   side, but this is a pain. Let's not do it. Thus, if a test fails, the
+   test scenario will show a call to [prepare], but the definition of
+   [prepare] will not be printed, so this scenario will not be easily
+   replayable. Never mind, for now. *)
+
+module RP = Prepare.Make(R)
+module CP = Prepare.Make(C)
+
 (* -------------------------------------------------------------------------- *)
 
 (* Declare the operations. *)
@@ -111,6 +125,8 @@ let () =
      specification is easier. *)
 
   let spec = t ^!> elt in
+  declare "minimum" spec R.minimum C.minimum;
+  declare "maximum" spec R.maximum C.maximum;
   declare "choose" spec R.choose C.choose;
 
   (* Iteration. *)
@@ -134,7 +150,15 @@ let () =
   declare "compare_minimum" spec R.compare_minimum C.compare_minimum;
 
   let spec = list t ^> t in
-  declare "sorted_union" spec R.sorted_union C.sorted_union;
+  declare "(Fun.compose sorted_union prepare)"
+    spec
+    (Fun.compose R.sorted_union RP.prepare)
+    (Fun.compose C.sorted_union CP.prepare);
+
+  (* TODO *)
+
+  let spec = elt ^> t ^> t in
+  declare "above" spec R.above C.above;
 
   ()
 
