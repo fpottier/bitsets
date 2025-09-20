@@ -21,17 +21,22 @@ include API.SET
   with type elt = int
    and type t = private int
 
-(* [iter_delta] and [fold_delta] are slightly generalized variants of [iter]
-   and [fold]. They add the constant [delta] on the fly to each set element
-   before presenting this set element to the user function [f]. *)
+(**/**)
+
+(* The following operations are offered by the module [WordBitSet] but are
+   not offered by other varieties of bit sets. Therefore they are not part
+   of the signature [SET]. We do not document their existence. *)
+
+(* [iter_delta] and [fold_delta] are generalized variants of [iter] and
+   [fold]. They add the constant [delta] on the fly to each set element
+   before yielding it. *)
 
 val iter_delta: int -> (elt -> unit) -> t -> unit
 val fold_delta: int -> (elt -> 'b -> 'b) -> t -> 'b -> 'b
 
-val shift : t -> int -> t * t
 (**[shift s delta] shifts the elements of the set [s] up by [delta],
-   where [0 <= delta <= bound] must hold.
-   The result is returned as pair of sets [(l, r)]:
-     [l = { x + delta | x ∈ set, x + delta < bound }]
-   and
-     [r = { x + delta - bound | x ∈ set, x + delta >= bound }] *)
+   where [0 <= delta <= bound] must hold. The result is returned as
+   a pair of two sets, namely:
+   - the set [{ x + delta         | x ∈ set, x + delta  < bound }] and
+   - the set [{ x + delta - bound | x ∈ set, x + delta >= bound }]. *)
+val shift : t -> int -> t * t

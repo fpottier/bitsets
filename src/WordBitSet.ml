@@ -161,6 +161,19 @@ let[@inline] union s1 s2 =
 let[@inline] inter s1 s2 =
   s1 land s2
 
+let[@inline] diff s1 s2 =
+  s1 land lnot s2
+
+(* [above x s] is the subset { y ∈ s | x < y }. *)
+
+let[@inline] above x s =
+  (* A mask with only [x] set. *)
+  let mask = bit x in
+  (* A mask with all elements less than or equal to [x] set. *)
+  let mask = mask lor (mask - 1) in
+  (* Remove these elements. *)
+  diff s mask
+
 (* -------------------------------------------------------------------------- *)
 
 (* Cardinality. *)
@@ -326,18 +339,9 @@ let extract_shared_prefix ss1 ss2 =
     let r2 = ss2 land rest_mask in
     common, (r1, r2)
 
-let[@inline] diff s1 s2 =
-  s1 land lnot s2
+(* -------------------------------------------------------------------------- *)
 
-(* [above x s] is the subset { y ∈ s | x < y }. *)
-
-let[@inline] above x s =
-  (* A mask with only [x] set. *)
-  let mask = bit x in
-  (* A mask with all elements less than or equal to [x] set. *)
-  let mask = mask lor (mask - 1) in
-  (* Remove these elements. *)
-  diff s mask
+(* Odds and ends. *)
 
 let[@inline] shift s delta =
   assert (0 <= delta && delta <= bound);
