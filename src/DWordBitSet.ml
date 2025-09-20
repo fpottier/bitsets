@@ -220,12 +220,10 @@ let extract_unique_prefix s1 s2 =
   and D (hi2, lo2) = s2 in
   if W.is_empty lo2 then
     (* [lo1] is entirely part of the unique prefix; [hi1] must be split. *)
-    let () = assert (not (W.is_empty hi2)) in
     let hi1a, hi1b = W.extract_unique_prefix hi1 hi2 in
     construct hi1a lo1, construct hi1b W.empty
   else
     (* [lo1] must be split; [hi1] is entirely outside of the unique prefix. *)
-    let () = assert (not (W.is_empty lo2)) in
     let lo1a, lo1b = W.extract_unique_prefix lo1 lo2 in
     construct W.empty lo1a, construct hi1 lo1b
 
