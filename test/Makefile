@@ -1,16 +1,18 @@
 # [make test] runs several tests in parallel.
 # These tests do not terminate; they run forever.
 
+SUBDIRS := \
+  WordBitSet \
+  DWordBitSet \
+
 .PHONY: test
 test:
 	@ make clean
-	@ dune build @all
+	@ for d in $(SUBDIRS) ; do make -C $$d all ; done
 	@ parallel \
 	  --tag --line-buffer \
 	  make -C {} random_nodep \
-	  ::: \
-	  WordBitSet \
-	  DWordBitSet \
+	  ::: $(SUBDIRS)
 
 .PHONY: clean
 clean:
