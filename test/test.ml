@@ -155,6 +155,16 @@ let () =
     (Fun.compose R.sorted_union RP.prepare)
     (Fun.compose C.sorted_union CP.prepare);
 
+  let spec = t ^>> fun s1 -> (R.eup s1) % t ^> t *** t in
+  declare "extract_unique_prefix" spec
+    R.extract_unique_prefix
+    C.extract_unique_prefix;
+
+  let spec = t ^>> fun s1 -> (R.esp s1) % t ^> t *** (t *** t) in
+  declare "extract_shared_prefix" spec
+    R.extract_shared_prefix
+    C.extract_shared_prefix;
+
   (* TODO *)
 
   let spec = elt ^> t ^> t in

@@ -78,3 +78,37 @@ let sorted_union ss =
 let above x s =
   let _, _, s = split x s in
   s
+
+(* [eup s1 s2] is the precondition of [extract_unique_prefix s1 s2]. *)
+
+let eup s1 s2 =
+  nonempty s1 &&
+  nonempty s2 &&
+  minimum s1 < minimum s2
+
+let extract_unique_prefix s1 s2 =
+  let x2 = minimum s2 in
+  let head1, _, _ = split x2 s1 in
+  assert (nonempty head1);
+  let tail1 = diff s1 head1 in
+  head1, tail1
+
+(* [esp s1 s2] is the precondition of [extract_shared_prefix s1 s2]. *)
+
+let esp s1 s2 =
+  nonempty s1 &&
+  nonempty s2 &&
+  minimum s1 = minimum s2
+
+let rec shared_prefix s1 s2 =
+  let x = minimum s1 in
+  let s1 = remove x s1
+  and s2 = remove x s2 in
+  if esp s1 s2 then
+    add x (shared_prefix s1 s2)
+  else
+    singleton x
+
+let extract_shared_prefix s1 s2 =
+  let head = shared_prefix s1 s2 in
+  head, (diff s1 head, diff s2 head)
