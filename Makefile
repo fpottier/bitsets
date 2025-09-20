@@ -134,7 +134,7 @@ FIND     := $(shell if command -v gfind >/dev/null ; then echo gfind ; else echo
 
 .PHONY: headache
 headache:
-	@ for f in $(shell $(FIND) src -type f -regex ".*\.ml\(i\|y\|l\)?") ; do \
+	@ for f in $(shell $(FIND) src test -type f -regex ".*\.ml\(i\|y\|l\)?") ; do \
 	  $(HEADACHE) -c headache.config -h $(HEADER) $$f ; \
 	done
 

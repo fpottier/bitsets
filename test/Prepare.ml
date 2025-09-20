@@ -1,3 +1,15 @@
+(******************************************************************************)
+(*                                                                            *)
+(*                                  Bitsets                                   *)
+(*                                                                            *)
+(*                       François Pottier, Inria Paris                        *)
+(*                                                                            *)
+(*       Copyright 2025--2025 Inria. All rights reserved. This file is        *)
+(*       distributed under the terms of the GNU Library General Public        *)
+(*       License, with an exception, as described in the file LICENSE.        *)
+(*                                                                            *)
+(******************************************************************************)
+
 module Make (X : sig
   type elt = int
   type t
