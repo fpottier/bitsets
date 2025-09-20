@@ -1,5 +1,5 @@
-(executable
-  (name test)
+(library
+  (name setup)
   (libraries monolith bitsets)
   (enabled_if (= %{profile} dev))
 )

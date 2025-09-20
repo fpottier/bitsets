@@ -30,7 +30,7 @@ clean:
 test:
 	@ make clean
 	@ dune build @all
-	@ make -C test random
+	@ make -C test $@
 
 .PHONY: install
 install:

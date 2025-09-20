@@ -1,8 +1,16 @@
-# The switch that is used for testing is the current switch.
-SWITCH := $(shell opam switch show)
+# [make test] runs several tests in parallel.
+# These tests do not terminate; they run forever.
 
-EXE := test.exe
+.PHONY: test
+test:
+	@ make clean
+	@ dune build @all
+	@ parallel \
+	  --tag --line-buffer \
+	  make -C {} random_nodep \
+	  ::: \
+	  WordBitSet \
 
-# This line is somewhat problematic, as it assumes that ocamlfind and
-# monolith are installed in the current switch, whatever it is.
--include $(shell ocamlfind query monolith)/Makefile.monolith
+.PHONY: clean
+clean:
+	@ git clean -fdX

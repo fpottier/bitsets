@@ -12,11 +12,15 @@
 
 open Monolith
 
-(* This is the reference implementation. *)
+(* [R] is the reference implementation. *)
 module R = Reference
 
-(* This is the candidate implementation. *)
-module C = Bitsets.WordBitSet
+(* [C] is the candidate implementation. *)
+module Make (C : sig
+  val bound : int
+  include Bitsets.API.SET with type elt = int
+  val name : string
+end) = struct
 
 (* -------------------------------------------------------------------------- *)
 
@@ -178,8 +182,10 @@ let () =
 (* Start the engine! *)
 
 let () =
-  dprintf "          open Bitsets;;\n"
+  dprintf "          open %s;;\n" C.name
 
 let () =
   let fuel = 16 in
   main fuel
+
+end (* Make *)
