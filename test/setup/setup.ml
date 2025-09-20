@@ -19,6 +19,7 @@ module R = Reference
 module Make (C : sig
   val bound : int
   include Bitsets.API.SET with type elt = int
+  val check : t -> unit
   val name : string
 end) = struct
 
@@ -29,7 +30,7 @@ end) = struct
 
 let () =
   dprintf {|
-          let comparison_eq c1 c2 =\n\
+          let comparison_eq c1 c2 =
             c1 < 0 && c2 < 0 || c1 = 0 && c2 = 0 || c1 > 0 && c2 > 0;;
 |}
 
@@ -43,8 +44,11 @@ let comparison : (int, int) spec =
 
 (* The abstract type [t]. *)
 
+let check _model =
+  C.check, constant "check"
+
 let t =
-  declare_abstract_type ()
+  declare_abstract_type ~check ()
 
 (* The type [elt]. *)
 
@@ -125,8 +129,8 @@ let () =
   let spec = t ^> t ^> bool in
   declare "subset" spec R.subset C.subset;
 
-  let spec = (R.nonempty % t) ^>> fun s1 -> (R.qs s1 % t) ^> bool in
-  declare "quick_subset" spec R.subset C.quick_subset;
+  let spec = t ^>> fun s1 -> (R.qs s1 % t) ^> bool in
+  declare "quick_subset" spec R.quick_subset C.quick_subset;
 
   (* Extraction. *)
 
@@ -165,12 +169,12 @@ let () =
     (Fun.compose R.sorted_union RP.prepare)
     (Fun.compose C.sorted_union CP.prepare);
 
-  let spec = t ^>> fun s1 -> (R.eup s1) % t ^> t *** t in
+  let spec = t ^> R.nonempty % t ^> t *** t in
   declare "extract_unique_prefix" spec
     R.extract_unique_prefix
     C.extract_unique_prefix;
 
-  let spec = t ^>> fun s1 -> (R.esp s1) % t ^> t *** (t *** t) in
+  let spec = t ^> t ^> t *** (t *** t) in
   declare "extract_shared_prefix" spec
     R.extract_shared_prefix
     C.extract_shared_prefix;

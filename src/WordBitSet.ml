@@ -13,6 +13,9 @@
 type t =
   int
 
+let check s =
+  ignore s
+
 type elt =
   int
 
@@ -212,7 +215,7 @@ let[@inline] mem x s =
   subset (singleton x) s
 
 let[@inline] quick_subset s1 s2 =
-  inter s1 s2 <> 0
+  not (disjoint s1 s2)
 
 (* -------------------------------------------------------------------------- *)
 
@@ -316,30 +319,16 @@ let[@inline] compare_minimum ss1 ss2 =
 let[@inline] sorted_union ss =
   List.fold_left union empty ss
 
-let extract_unique_prefix ss1 ss2 =
-  if ss1 = 0 then
-    0, 0
-  else
-  if compare_minimum ss1 ss2 >= 0 then
-    empty, ss1
-  else
-    let prefix_mask = lsb ss2 - 1 in
-    let ss0 = ss1 land prefix_mask in
-    assert (ss0 <> 0);
-    ss0, ss1 land lnot prefix_mask
+let[@inline] extract_unique_prefix s1 s2 =
+  assert (not (is_empty s2));
+  let mask = lsb s2 - 1 in
+  inter s1 mask, diff s1 mask
 
-let extract_shared_prefix ss1 ss2 =
-  if ss1 = ss2 then
-    ss1, (empty, empty)
-  else
-    let ss1' = ss1 land lnot ss2 in
-    let ss2' = ss2 land lnot ss1 in
-    let common_mask = (lsb ss1' - 1) land (lsb ss2' - 1) in
-    let rest_mask = lnot common_mask in
-    let common = ss1 land common_mask in
-    let r1 = ss1 land rest_mask in
-    let r2 = ss2 land rest_mask in
-    common, (r1, r2)
+let[@inline] extract_shared_prefix s1 s2 =
+  let s1' = diff s1 s2 in
+  let s2' = diff s2 s1 in
+  let mask = (lsb s1' - 1) land (lsb s2' - 1) in
+  inter s1 mask, (diff s1 mask, diff s2 mask)
 
 (* -------------------------------------------------------------------------- *)
 

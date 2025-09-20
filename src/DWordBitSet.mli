@@ -21,3 +21,8 @@ val bound: int
 (**A bit set represents a set of integers. *)
 include API.SET
   with type elt = int
+
+(**/**)
+
+(**[check] is used only during testing. *)
+val check : t -> unit

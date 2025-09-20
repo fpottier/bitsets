@@ -82,16 +82,14 @@ module type SET = sig
      [s2]. *)
   val subset: t -> t -> bool
 
-  (**[quick_subset s1 s2] is a fast test for the set inclusion [s1 ⊆ s2].
-
-     The sets [s1] and [s2] must be nonempty.
+  (**[quick_subset s1 s2] is a fast test for the property [s1 <> ∅ ∧ s1 ⊆ s2].
 
      It must be the case that either [s1] is a subset of [s2] or [s1] and [s2]
      are disjoint: that is, [s1 ⊆ s2 ⋁ s1 ∩ s2 = ∅] must hold.
 
-     Under this hypothesis, [quick_subset s1 s2] can be implemented simply
-     by picking an arbitrary element of [s1] (if there is one) and testing
-     whether it is a member of [s2]. *)
+     Under this precondition, the property [s1 <> ∅ ∧ s1 ⊆ s2] is equivalent to
+     [not (disjoint s1 s2)]. However, [quick_subset s1 s2] can be faster than
+     [not (disjoint s1 s2)]. *)
   val quick_subset: t -> t -> bool
 
   (** {1 Extraction} *)
@@ -143,17 +141,13 @@ module type SET = sig
      [maximum s1 < minimum s2]. *)
   val sorted_union : t list -> t
 
-  (**[extract_unique_prefix s1 s2] requires the sets [s1] and [s2] to be
-     nonempty. Furthermore, it requires [compare_minimum s1 s2 < 0], that is,
-     [minimum s1 < minimum s2]. It splits [s1] into two disjoint subsets
-     [head1] and [tail1] such that [head1] is exactly the subset of [s1] whose
-     elements are less than [minimum s2]. Thus, [head1] is guaranteed to be
-     nonempty, whereas [tail1] may be empty. *)
+  (**[extract_unique_prefix s1 s2] requires the set [s2] to be
+     nonempty. It splits [s1] into two disjoint subsets [head1] and
+     [tail1] such that [head1] is exactly the subset of [s1] whose
+     elements are less than [minimum s2]. *)
   val extract_unique_prefix : t -> t -> t * t
 
-  (**[extract_shared_prefix s1 s2] requires the sets [s1] and [s2] to be
-     nonempty. Furthermore, it requires [compare_minimum s1 s2 = 0], that is,
-     [minimum s1 = minimum s2]. It splits [s1] and [s2] into three subsets
+  (**[extract_shared_prefix s1 s2] splits [s1] and [s2] into three subsets
      [head], [tail1], and [tail2], as follows:
 
      - [s1] is [head U tail1] and [s2] is [head U tail2].

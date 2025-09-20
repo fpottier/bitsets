@@ -42,3 +42,6 @@ val fold_delta: int -> (elt -> 'b -> 'b) -> t -> 'b -> 'b
    - the set [{ x + delta         | x ∈ set, x + delta  < bound }] and
    - the set [{ x + delta - bound | x ∈ set, x + delta >= bound }]. *)
 val shift : t -> int -> t * t
+
+(**[check] is used only during testing. *)
+val check : t -> unit

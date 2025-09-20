@@ -19,12 +19,13 @@ let nonempty s =
   not (is_empty s)
 
 (* [qs s1 s2] determines whether [s1] and [s2] are suitable arguments
-   for [quick_subset]. They must be both nonempty and the condition
-   [s1 ⊆ s2 ⋁ s1 ∩ s2 = ∅] must hold. *)
+   for [quick_subset]. The condition [s1 ⊆ s2 ⋁ s1 ∩ s2 = ∅] must hold. *)
 let qs s1 s2 =
-  nonempty s1 &&
-  nonempty s2 &&
-  (subset s1 s2 || disjoint s1 s2)
+  subset s1 s2 || disjoint s1 s2
+
+let quick_subset s1 s2 =
+  assert (qs s1 s2);
+  not (disjoint s1 s2)
 
 let rev_elements s =
   List.rev (elements s)
@@ -79,35 +80,23 @@ let above x s =
   let _, _, s = split x s in
   s
 
-(* [eup s1 s2] is the precondition of [extract_unique_prefix s1 s2]. *)
-
-let eup s1 s2 =
-  nonempty s1 &&
-  nonempty s2 &&
-  minimum s1 < minimum s2
-
 let extract_unique_prefix s1 s2 =
   let x2 = minimum s2 in
   let head1, _, _ = split x2 s1 in
-  assert (nonempty head1);
   let tail1 = diff s1 head1 in
   head1, tail1
 
-(* [esp s1 s2] is the precondition of [extract_shared_prefix s1 s2]. *)
-
-let esp s1 s2 =
-  nonempty s1 &&
-  nonempty s2 &&
-  minimum s1 = minimum s2
-
 let rec shared_prefix s1 s2 =
-  let x = minimum s1 in
-  let s1 = remove x s1
-  and s2 = remove x s2 in
-  if esp s1 s2 then
+  if is_empty s1 || is_empty s2 then empty else
+  let x1 = minimum s1
+  and x2 = minimum s2 in
+  if x1 = x2 then
+    let x = x1 in
+    let s1 = remove x s1
+    and s2 = remove x s2 in
     add x (shared_prefix s1 s2)
   else
-    singleton x
+    empty
 
 let extract_shared_prefix s1 s2 =
   let head = shared_prefix s1 s2 in

@@ -10,265 +10,233 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(* This module offers bitsets that fit within *two* OCaml integers. This can
-   be used to represent sets of integers in the semi-open interval [0, bound),
-   where [bound] is [2 * AtomicBitSet.bound], that is, usually 126. *)
-
-module A =
+module W =
   WordBitSet
 
-(* As a special case, the empty set is represented by the data constructor [E].
-   Thus, the empty set requires no memory allocation. In order to maintain a
-   unique representation of sets, we forbid the value [D (A.empty, A.empty)].
-   The smart constructor [construct] enforces this restriction. *)
-
-type t =
-  | E
-  | D of A.t * A.t
-
-let construct hi lo =
-  if A.is_empty hi && A.is_empty lo then
-    E
-  else
-    D (hi, lo)
+let bound =
+  2 * W.bound
 
 type elt =
   int
 
-let bound =
-  2 * A.bound
+(* A bit set is represented as a pair of words. *)
+
+type t =
+  | D of W.t * W.t
+
+(* -------------------------------------------------------------------------- *)
+
+(* Construction. *)
 
 let empty =
-  E
+  D (W.empty, W.empty)
 
-let is_empty s =
-  match s with
-  | E ->
-      true
-  | D (_, _) ->
-      (* Assuming every set is built by [construct] above,
-         a set whose constructor is [D] cannot be empty. *)
-      false
+(* The smart constructor [construct hi lo] produces a result that is
+   equivalent to [D (hi, lo)]. In the special case where [hi] and [lo] are
+   both empty, it produces [empty], thereby avoiding memory allocation.
+
+   Furthermore, because [empty] is the sole empty set, [is_empty] can be
+   implemented in the form of a physical equality test. (We assume that
+   the OCaml compiler does not perform unsharing!) *)
+
+let[@inline] construct hi lo =
+  if W.is_empty hi && W.is_empty lo then
+    empty
+  else
+    D (hi, lo)
+
+let check s =
+  let D (hi, lo) = s in
+  if W.is_empty hi && W.is_empty lo then
+    assert (s == empty)
 
 let singleton i =
-  if i < A.bound then
-    D (A.empty, A.singleton i)
+  if i < W.bound then
+    D (W.empty, W.singleton i)
   else
-    D (A.singleton (i - A.bound), A.empty)
+    D (W.singleton (i - W.bound), W.empty)
 
 let add i s =
-  match s with
-  | E ->
-      singleton i
-  | D (hi, lo) ->
-      if i < A.bound then
-        let lo' = A.add i lo in
-        if lo == lo' then s else D (hi, lo')
-      else
-        let hi' = A.add (i - A.bound) hi in
-        if hi == hi' then s else D (hi', lo)
+  let D (hi, lo) = s in
+  if i < W.bound then
+    let lo' = W.add i lo in
+    if lo == lo' then s else D (hi, lo')
+  else
+    let hi' = W.add (i - W.bound) hi in
+    if hi == hi' then s else D (hi', lo)
 
 let remove i s =
-  match s with
-  | E ->
-      s
-  | D (hi, lo) ->
-      if i < A.bound then
-        let lo' = A.remove i lo in
-        if lo == lo' then s else construct hi lo'
-      else
-        let hi' = A.remove (i - A.bound) hi in
-        if hi == hi' then s else construct hi' lo
+  let D (hi, lo) = s in
+  if i < W.bound then
+    let lo' = W.remove i lo in
+    if lo == lo' then s else construct hi lo'
+  else
+    let hi' = W.remove (i - W.bound) hi in
+    if hi == hi' then s else construct hi' lo
 
-let fold f s accu =
-  match s with
-  | E ->
-      accu
-  | D (hi, lo) ->
-      let accu = A.fold f lo accu in
-      let accu = A.fold_delta A.bound f hi accu in
-      accu
+let union s1 s2 =
+  let D (hi1, lo1) = s1
+  and D (hi2, lo2) = s2 in
+  let hi = W.union hi1 hi2
+  and lo = W.union lo1 lo2 in
+  if hi == hi2 && lo == lo2 then s2 else construct hi lo
 
-let iter f s =
-  match s with
-  | E ->
-      ()
-  | D (hi, lo) ->
-      A.iter f lo;
-      A.iter_delta A.bound f hi
+let inter s1 s2 =
+  let D (hi1, lo1) = s1
+  and D (hi2, lo2) = s2 in
+  construct (W.inter hi1 hi2) (W.inter lo1 lo2)
+
+let diff s1 s2 =
+  let D (hi1, lo1) = s1
+  and D (hi2, lo2) = s2 in
+  construct (W.diff hi1 hi2) (W.diff lo1 lo2)
+
+let above x s =
+  let D (hi, lo) = s in
+  if W.bound <= x then
+    construct (W.above (x - W.bound) hi) W.empty
+  else
+    construct hi (W.above x lo)
+
+(* -------------------------------------------------------------------------- *)
+
+(* Cardinality. *)
+
+let[@inline] is_empty s =
+  s == empty
 
 let is_singleton s =
-  match s with
-  | E ->
-      false
-  | D (hi, lo) ->
-      A.is_singleton hi && A.is_empty lo ||
-      A.is_empty hi && A.is_singleton lo
+  let D (hi, lo) = s in
+  W.is_empty hi && W.is_singleton lo ||
+  W.is_singleton hi && W.is_empty lo
 
 let cardinal s =
-  match s with
-  | E ->
-      0
-  | D (hi, lo) ->
-      A.cardinal hi + A.cardinal lo
+  let D (hi, lo) = s in
+  W.cardinal hi + W.cardinal lo
+
+(* -------------------------------------------------------------------------- *)
+
+(* Tests. *)
+
+let mem i s =
+  let D (hi, lo) = s in
+  if i < W.bound then
+    W.mem i lo
+  else
+    W.mem (i - W.bound) hi
+
+let equal s1 s2 =
+  (s1 == s2) ||
+  let D (hi1, lo1) = s1
+  and D (hi2, lo2) = s2 in
+  W.equal hi1 hi2 &&
+  W.equal lo1 lo2
+
+let compare s1 s2 =
+  if s1 == s2 then 0 else
+  let D (hi1, lo1) = s1
+  and D (hi2, lo2) = s2 in
+  let c = W.compare hi1 hi2 in
+  if c = 0 then W.compare lo1 lo2
+  else c
+
+let disjoint s1 s2 =
+  let D (hi1, lo1) = s1
+  and D (hi2, lo2) = s2 in
+  W.disjoint hi1 hi2 && W.disjoint lo1 lo2
+
+let subset s1 s2 =
+  let D (hi1, lo1) = s1
+  and D (hi2, lo2) = s2 in
+  W.subset hi1 hi2 && W.subset lo1 lo2
+
+let[@inline] quick_subset s1 s2 =
+  not (disjoint s1 s2)
+
+(* -------------------------------------------------------------------------- *)
+
+(* Extraction. *)
+
+let minimum s =
+  let D (hi, lo) = s in
+  if W.is_empty lo then
+    W.minimum hi + W.bound
+  else
+    W.minimum lo
+
+let maximum s =
+  let D (hi, lo) = s in
+  if W.is_empty hi then
+    W.maximum lo
+  else
+    W.maximum hi + W.bound
+
+let choose =
+  minimum
+
+(* -------------------------------------------------------------------------- *)
+
+(* Iteration. *)
+
+let iter yield s =
+  let D (hi, lo) = s in
+  W.iter yield lo;
+  W.iter_delta W.bound yield hi
+
+let fold yield s accu =
+  let D (hi, lo) = s in
+  let accu = W.fold yield lo accu in
+  let accu = W.fold_delta W.bound yield hi accu in
+  accu
 
 let elements s =
   (* Note: the list is produced in decreasing order. *)
   fold (fun tl hd -> tl :: hd) s []
 
-let subset s1 s2 =
-  match s1, s2 with
-  | E, _ ->
-      true
-  | D (_, _), E ->
-      (* Assuming every set is built by [construct] above,
-         a set whose constructor is [D] cannot be empty. *)
-      false
-  | D (hi1, lo1), D (hi2, lo2) ->
-      A.subset hi1 hi2 && A.subset lo1 lo2
+(* -------------------------------------------------------------------------- *)
 
-let mem i s =
-  match s with
-  | E ->
-      false
-  | D (hi, lo) ->
-      if i < A.bound then
-        A.mem i lo
-      else
-        A.mem (i - A.bound) hi
-
-let union s1 s2 =
-  match s1, s2 with
-  | E, s
-  | s, E ->
-      s
-  | D (hi1, lo1), D (hi2, lo2) ->
-      let hi = A.union hi1 hi2
-      and lo = A.union lo1 lo2 in
-      if hi == hi2 && lo == lo2 then s2 else D (hi, lo)
-
-let inter s1 s2 =
-  match s1, s2 with
-  | E, _
-  | _, E ->
-      E
-  | D (hi1, lo1), D (hi2, lo2) ->
-      construct (A.inter hi1 hi2) (A.inter lo1 lo2)
-
-let diff s1 s2 =
-  match s1, s2 with
-  | E, _ ->
-      E
-  | _, E ->
-      s1
-  | D (hi1, lo1), D (hi2, lo2) ->
-      construct (A.diff hi1 hi2) (A.diff lo1 lo2)
-
-let above x s =
-  match s with
-  | E ->
-      E
-  | D (hi, lo) ->
-      if A.bound <= x then
-        construct (A.above (x - A.bound) hi) A.empty
-      else
-        construct hi (A.above x lo)
-
-let minimum s =
-  match s with
-  | E ->
-      raise Not_found
-  | D (hi, lo) ->
-      if A.is_empty lo then
-        A.minimum hi + A.bound
-      else
-        A.minimum lo
-
-let maximum s =
-  match s with
-  | E ->
-      raise Not_found
-  | D (hi, lo) ->
-      if A.is_empty hi then
-        A.maximum lo
-      else
-        A.maximum hi + A.bound
-
-let choose =
-  minimum
-
-let compare s1 s2 =
-  if s1 == s2 then 0
-  else match s1, s2 with
-  | E  , E   -> 0
-  | D _, E   -> 1
-  | E  , D _ -> -1
-  | D (hi1, lo1), D (hi2, lo2) ->
-    begin match A.compare hi1 hi2 with
-      | 0 -> A.compare lo1 lo2
-      | n -> n
-    end
-
-let equal s1 s2 =
-  (s1 == s2) ||
-  match s1, s2 with
-  | E , E -> true
-  | D _, E | E , D _ -> false
-  | D (hi1, lo1), D (hi2, lo2) ->
-    A.equal hi1 hi2 &&
-    A.equal lo1 lo2
-
-let disjoint s1 s2 =
-  match s1, s2 with
-  | E, _
-  | _, E ->
-      true
-  | D (hi1, lo1), D (hi2, lo2) ->
-      A.disjoint hi1 hi2 && A.disjoint lo1 lo2
-
-let quick_subset s1 s2 =
-  match s1, s2 with
-  | E, _ | _, E -> false
-  | D (hi1, lo1), D (hi2, lo2) ->
-    A.quick_subset lo1 lo2 ||
-    A.quick_subset hi1 hi2
+(* Decomposition. *)
 
 let compare_minimum s1 s2 =
-  match s1, s2 with
-  | E, E -> 0
-  | E, _ -> -1
-  | _, E -> 1
-  | D (hi1, lo1), D (hi2, lo2) ->
-    match A.is_empty lo1, A.is_empty lo2 with
-    | true , true  -> A.compare_minimum hi1 hi2
-    | false, false -> A.compare_minimum lo1 lo2
-    | true , false -> 1
-    | false, true  -> -1
+  match is_empty s1, is_empty s2 with
+  | true, true  ->  0
+  | true, false -> -1
+  | false, true -> +1
+  | false, false ->
+      let D (hi1, lo1) = s1
+      and D (hi2, lo2) = s2 in
+      match W.is_empty lo1, W.is_empty lo2 with
+      | true , true  -> W.compare_minimum hi1 hi2
+      | false, false -> W.compare_minimum lo1 lo2
+      | true , false -> +1
+      | false, true  -> -1
 
-let sorted_union xs =
+let[@inline] sorted_union xs =
   List.fold_left union empty xs
 
 let extract_unique_prefix s1 s2 =
-  match s1, s2 with
-  | E, _ -> E, E
-  | _, E -> invalid_arg "extract_unique_prefix: r < l"
-  | D (hi1, lo1), D (hi2, lo2) ->
-    if A.is_empty lo2 then
-      let p, r = A.extract_unique_prefix hi1 hi2 in
-      (construct p lo1, construct r A.empty)
-    else if A.is_empty lo1 then
-      invalid_arg "extract_unique_prefix: r < l"
-    else
-      let p, r = A.extract_unique_prefix lo1 lo2 in
-      (construct A.empty p, construct hi1 r)
+  assert (not (is_empty s2));
+  let D (hi1, lo1) = s1
+  and D (hi2, lo2) = s2 in
+  if W.is_empty lo2 then
+    (* [lo1] is entirely part of the unique prefix; [hi1] must be split. *)
+    let () = assert (not (W.is_empty hi2)) in
+    let hi1a, hi1b = W.extract_unique_prefix hi1 hi2 in
+    construct hi1a lo1, construct hi1b W.empty
+  else
+    (* [lo1] must be split; [hi1] is entirely outside of the unique prefix. *)
+    let () = assert (not (W.is_empty lo2)) in
+    let lo1a, lo1b = W.extract_unique_prefix lo1 lo2 in
+    construct W.empty lo1a, construct hi1 lo1b
 
 let extract_shared_prefix s1 s2 =
-  match s1, s2 with
-  | _, E | E, _ -> E, (s1, s2)
-  | D (hi1, lo1), D (hi2, lo2) ->
-    if A.equal lo1 lo2 then
-      let hi, (hi1, hi2) = A.extract_shared_prefix hi1 hi2 in
-      (construct hi lo1, (construct hi1 A.empty, construct hi2 A.empty))
-    else
-      let lo, (lo1, lo2) = A.extract_shared_prefix lo1 lo2 in
-      (construct A.empty lo, (construct hi1 lo1, construct hi2 lo2))
+  let D (hi1, lo1) = s1
+  and D (hi2, lo2) = s2 in
+  if W.equal lo1 lo2 then
+    (* [lo1] is entirely part of the shared prefix. *)
+    let hi, (hi1, hi2) = W.extract_shared_prefix hi1 hi2 in
+    construct hi lo1, (construct hi1 W.empty, construct hi2 W.empty)
+  else
+    (* The shared prefix is a fragment of [lo]. *)
+    let lo, (lo1, lo2) = W.extract_shared_prefix lo1 lo2 in
+    construct W.empty lo, (construct hi1 lo1, construct hi2 lo2)

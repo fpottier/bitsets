@@ -7,6 +7,7 @@ of several kinds of bit sets.
 
 {!modules:
 Bitsets.WordBitSet
+Bitsets.DWordBitSet
 }
 
 {1 Installation and Usage}
