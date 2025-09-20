@@ -87,6 +87,12 @@ let () =
   let spec = t ^> t ^> t in
   declare "inter" spec R.inter C.inter;
 
+  let spec = t ^> t ^> t in
+  declare "diff" spec R.diff C.diff;
+
+  let spec = elt ^> t ^> t in
+  declare "above" spec R.above C.above;
+
   (* Cardinality. *)
 
   let spec = t ^> bool in
@@ -164,11 +170,6 @@ let () =
   declare "extract_shared_prefix" spec
     R.extract_shared_prefix
     C.extract_shared_prefix;
-
-  (* TODO *)
-
-  let spec = elt ^> t ^> t in
-  declare "above" spec R.above C.above;
 
   ()
 

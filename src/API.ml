@@ -43,6 +43,13 @@ module type SET = sig
   (**[inter s1 s2] is the intersection of the sets [s1] and [s2]. *)
   val inter: t -> t -> t
 
+  (** [diff s1 s2] is the set difference of the sets [s1] and [s2]. *)
+  val diff: t -> t -> t
+
+  (** [above x s] is the set of the elements of [s] that are greater
+      than [x]. *)
+  val above: elt -> t -> t
+
   (** {1 Cardinality} *)
 
   (**[is_empty s] determines whether the [s] is empty. *)
@@ -87,6 +94,14 @@ module type SET = sig
 
   (** {1 Extraction} *)
 
+  (** [minimum s] returns the minimum element of the set [s].
+      If the set [s] is empty, the exception [Not_found] is raised. *)
+  val minimum: t -> elt
+
+  (** [maximum s] returns the maximum element of the set [s].
+      If the set [s] is empty, the exception [Not_found] is raised. *)
+  val maximum: t -> elt
+
   (**If the set [s] is nonempty, then [choose s] returns an arbitrary
      element of this set. Otherwise, the exception [Not_found] is raised. *)
   val choose: t -> elt
@@ -112,29 +127,28 @@ module type SET = sig
 
   (** {1 Decomposition} *)
 
-  val compare_minimum : t -> t -> int
   (**[compare_minimum], a total order on sets, is defined as follows:
 
      - The empty set is less than any nonemptyset.
      - If the sets [s1] and [s2] are nonempty, then [compare_minimum s1 s2]
        is [compare (minimum s1) (minimum s2)]. *)
+  val compare_minimum : t -> t -> int
 
-  val sorted_union : t list -> t
   (**[sorted_union ss] computes the union of the sets in the list [ss]. Every
      set in the list [ss] must be nonempty. The intervals that underlie these
      sets must be ordered and nonoverlapping: that is, if [s1] and [s2] are
      two adjacent sets in the list [ss], then they must satisfy the condition
      [maximum s1 < minimum s2]. *)
+  val sorted_union : t list -> t
 
-  val extract_unique_prefix : t -> t -> t * t
   (**[extract_unique_prefix s1 s2] requires the sets [s1] and [s2] to be
      nonempty. Furthermore, it requires [compare_minimum s1 s2 < 0], that is,
      [minimum s1 < minimum s2]. It splits [s1] into two disjoint subsets
      [head1] and [tail1] such that [head1] is exactly the subset of [s1] whose
      elements are less than [minimum s2]. Thus, [head1] is guaranteed to be
      nonempty, whereas [tail1] may be empty. *)
+  val extract_unique_prefix : t -> t -> t * t
 
-  val extract_shared_prefix : t -> t -> t * (t * t)
   (**[extract_shared_prefix s1 s2] requires the sets [s1] and [s2] to be
      nonempty. Furthermore, it requires [compare_minimum s1 s2 = 0], that is,
      [minimum s1 = minimum s2]. It splits [s1] and [s2] into three subsets
@@ -147,5 +161,6 @@ module type SET = sig
 
      In summary,
      [head] is the maximal shared prefix of the sets [s1] and [s2]. *)
+  val extract_shared_prefix : t -> t -> t * (t * t)
 
 end (* SET *)
