@@ -1,0 +1,17 @@
+{0 Bitsets}
+
+[bitsets] is an OCaml library that offers efficient implementations
+of several kinds of bit sets.
+
+{1 API}
+
+{!modules:
+Bitsets.WordBitSet
+}
+
+{1 Installation and Usage}
+
+Type [opam install bitsets].
+
+In your [dune] file, add [(libraries bitsets)] to the description of
+your [library] or [executable].
