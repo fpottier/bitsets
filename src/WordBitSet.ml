@@ -169,6 +169,7 @@ let[@inline] is_empty s =
   s = 0
 
 let[@inline] is_singleton s =
+  s <> 0 &&
   (* Test whether only one bit is set in [ss]. We do this by turning
      off the rightmost bit, then comparing to zero. *)
   s land (s - 1) = 0
