@@ -28,8 +28,12 @@ include API.SET
 val iter_delta: int -> (elt -> unit) -> t -> unit
 val fold_delta: int -> (elt -> 'b -> 'b) -> t -> 'b -> 'b
 
+val minimum: t -> elt
+(** [minimum s] returns the minimum element of the set [s].
+    If the set [s] is empty, the exception [Not_found] is raised. *)
+
 val maximum: t -> elt
-(** [maximum s] returns the largest element of the set [s].
+(** [maximum s] returns the maximum element of the set [s].
     If the set [s] is empty, the exception [Not_found] is raised. *)
 
 val diff: t -> t -> t
