@@ -298,8 +298,8 @@ let[@inline] compare_minimum ss1 ss2 =
      - for all (singleton) bit sets other than [min_int] and [0],
        the ordering is preserved. *)
 
-let[@inline] sorted_union xs =
-  List.fold_left union empty xs
+let[@inline] sorted_union ss =
+  List.fold_left union empty ss
 
 let extract_unique_prefix ss1 ss2 =
   if ss1 = 0 then
