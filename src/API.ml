@@ -127,15 +127,17 @@ module type SET = sig
      [maximum s1 < minimum s2]. *)
 
   val extract_unique_prefix : t -> t -> t * t
-  (**[extract_unique_prefix s1 s2] requires [compare_minimum s1 s2 < 0], that
-     is, [minimum s1 < minimum s2]. It splits [s1] into two disjoint subsets
+  (**[extract_unique_prefix s1 s2] requires the sets [s1] and [s2] to be
+     nonempty. Furthermore, it requires [compare_minimum s1 s2 < 0], that is,
+     [minimum s1 < minimum s2]. It splits [s1] into two disjoint subsets
      [head1] and [tail1] such that [head1] is exactly the subset of [s1] whose
      elements are less than [minimum s2]. Thus, [head1] is guaranteed to be
      nonempty, whereas [tail1] may be empty. *)
 
   val extract_shared_prefix : t -> t -> t * (t * t)
-  (**[extract_shared_prefix s1 s2] requires [compare_minimum s1 s2 = 0], that
-     is, [minimum s1 = minimum s2]. It splits [s1] and [s2] into three subsets
+  (**[extract_shared_prefix s1 s2] requires the sets [s1] and [s2] to be
+     nonempty. Furthermore, it requires [compare_minimum s1 s2 = 0], that is,
+     [minimum s1 = minimum s2]. It splits [s1] and [s2] into three subsets
      [head], [tail1], and [tail2], as follows:
 
      - [s1] is [head U tail1] and [s2] is [head U tail2].
