@@ -131,7 +131,7 @@ let mem i s =
     W.mem (i - W.bound) hi
 
 let equal s1 s2 =
-  (s1 == s2) ||
+  s1 == s2 ||
   let D (hi1, lo1) = s1
   and D (hi2, lo2) = s2 in
   W.equal hi1 hi2 &&
@@ -164,17 +164,17 @@ let[@inline] quick_subset s1 s2 =
 
 let minimum s =
   let D (hi, lo) = s in
-  if W.is_empty lo then
-    W.minimum hi + W.bound
-  else
+  if not (W.is_empty lo) then
     W.minimum lo
+  else
+    W.minimum hi + W.bound
 
 let maximum s =
   let D (hi, lo) = s in
-  if W.is_empty hi then
-    W.maximum lo
-  else
+  if not (W.is_empty hi) then
     W.maximum hi + W.bound
+  else
+    W.maximum lo
 
 let choose =
   minimum
@@ -204,17 +204,17 @@ let elements s =
 
 let compare_minimum s1 s2 =
   match is_empty s1, is_empty s2 with
-  | true, true  ->  0
-  | true, false -> -1
-  | false, true -> +1
+  | true , true  ->  0
+  | true , false -> -1
+  | false, true  -> +1
   | false, false ->
       let D (hi1, lo1) = s1
       and D (hi2, lo2) = s2 in
       match W.is_empty lo1, W.is_empty lo2 with
-      | true , true  -> W.compare_minimum hi1 hi2
       | false, false -> W.compare_minimum lo1 lo2
       | true , false -> +1
       | false, true  -> -1
+      | true , true  -> W.compare_minimum hi1 hi2
 
 let[@inline] sorted_union xs =
   List.fold_left union empty xs
