@@ -24,6 +24,7 @@
 * Use intrinsics -- but not inside Menhir.
   See `caml_z.c` in the library `zarith`.
   See the library `ocaml_intrinsics`.
+  [link](https://github.com/janestreet/ocaml_intrinsics_kernel/blob/master/src/int.mli)
 
 # Tests
 
