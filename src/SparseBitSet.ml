@@ -10,19 +10,26 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(* This data structure implements sets of integers (of unbounded magnitude). *)
-
 module W =
   WordBitSet
 
-(* A sparse bit set is a linked list pairs of an index and a bit set. The list
-   is sorted by order of increasing indices. *)
+(* An offset is a nonnegative multiple of [W.bound]. *)
 
 type offset =
   int (* a multiple of [W.bound] *)
 
-let compare_offsets (o1 : offset) (o2 : offset) =
+let[@inline] check_offset (o : offset) =
+  assert (0 <= o);
+  assert (o mod W.bound = 0)
+
+let[@inline] compare_offsets (o1 : offset) (o2 : offset) : int =
   compare o1 o2
+
+(* A sparse bit set is a linked list of pairs of an offset [o] and a nonempty
+   bit set [w]. The list is sorted by increasing order of offsets. *)
+
+type elt =
+  int
 
 type word =
   W.t
@@ -31,18 +38,14 @@ type t =
   | N
   | C of offset * word * t
 
-let check_offset (o : offset) =
-  assert (0 <= o);
-  assert (o mod W.bound = 0)
-
-let rec check o s =
+let rec check1 o s =
   match s with
   | N -> ()
   | C (o', w, s) ->
       check_offset o';
       assert (o < o');
       assert (not (W.is_empty w));
-      check o' s
+      check1 o' s
 
 let check s =
   match s with
@@ -50,104 +53,158 @@ let check s =
   | C (o, w, s) ->
       check_offset o;
       assert (not (W.is_empty w));
-      check o s
+      check1 o s
 
-type elt =
-  int
+(* -------------------------------------------------------------------------- *)
+
+(* Construction. *)
 
 let empty =
   N
 
-let is_empty = function
-  | N ->
-      true
-  | C _ ->
-      false
+let[@inline] construct o w s =
+  if W.is_empty w then s else C (o, w, s)
 
-let rec add base offset s =
+let rec add1 base i s =
+  check_offset base;
   match s with
   | N ->
       (* Insert at end. *)
-      C (base, W.singleton offset, N)
-  | C (addr, ss, qs) ->
-      if base < addr then
+      C (base, W.singleton i, empty)
+  | C (o, w, qs) ->
+      if base < o then
         (* Insert in front. *)
-        C (base, W.singleton offset, s)
-      else if base = addr then
+        C (base, W.singleton i, s)
+      else if base = o then
         (* Found appropriate cell, update bit field. *)
-        let ss' = W.add offset ss in
-        if W.equal ss' ss then s else C (addr, ss', qs)
+        let w' = W.add i w in
+        if W.equal w' w then s else C (o, w', qs)
       else
         (* Not there yet, continue. *)
-        let qs' = add base offset qs in
-        if qs == qs' then s else C (addr, ss, qs')
+        let qs' = add1 base i qs in
+        if qs == qs' then s else C (o, w, qs')
 
-let add i s =
-  let offset = i mod W.bound in
-  let base = i - offset in
-  add base offset s
+let[@inline] add x s =
+  let i = x mod W.bound in
+  let base = x - i in
+  add1 base i s
 
-let singleton i =
-  (* This is [add i N], specialised. *)
-  let offset = i mod W.bound in
-  let base = i - offset in
-  C (base, W.singleton offset, N)
+let[@inline] singleton x =
+  let i = x mod W.bound in
+  let base = x - i in
+  (* This is [add1 base i empty], specialized. *)
+  C (base, W.singleton i, empty)
 
-let rec remove base offset s =
+let rec remove1 base i s =
   match s with
   | N ->
-      N
-  | C (addr, ss, qs) ->
-      if base < addr then
+      empty
+  | C (o, w, qs) ->
+      if base < o then
         s
-      else if base = addr then
+      else if base = o then
         (* Found appropriate cell, update bit field. *)
-        let ss' = W.remove offset ss in
+        let ss' = W.remove i w in
         if W.is_empty ss' then
           qs
-        else if W.equal ss' ss then s else C (addr, ss', qs)
+        else if W.equal ss' w then s else C (o, ss', qs)
       else
         (* Not there yet, continue. *)
-        let qs' = remove base offset qs in
-        if qs == qs' then s else C (addr, ss, qs')
+        let qs' = remove1 base i qs in
+        if qs == qs' then s else C (o, w, qs')
 
-let remove i s =
-  let offset = i mod W.bound in
-  let base = i - offset in
-  remove base offset s
+let[@inline] remove x s =
+  let i = x mod W.bound in
+  let base = x - i in
+  remove1 base i s
 
-let rec mem base offset s =
-  match s with
-  | N ->
-      false
-  | C (addr, ss, qs) ->
-      if base < addr then
-        false
-      else if base = addr then
-        W.mem offset ss
+let rec union s1 s2 =
+  match s1, s2 with
+  | N, s
+  | s, N ->
+      s
+  | C (o1, w1, qs1), C (o2, w2, qs2) ->
+      if o1 < o2 then
+        C (o1, w1, union qs1 s2)
+      else if o1 > o2 then
+        let s = union s1 qs2 in
+        if s == qs2 then s2 else C (o2, w2, s)
       else
-        mem base offset qs
+        let ss = W.union w1 w2 in
+        let s = union qs1 qs2 in
+        if W.equal ss w2 && s == qs2 then s2 else C (o1, ss, s)
 
-let mem i s =
-  let offset = i mod W.bound in
-  let base = i - offset in
-  mem base offset s
+(* [inter] attempts to preserve sharing between its first argument and its
+   result. This is an arbitrary decision; furthermore, it is not mandatory,
+   as the specification of [inter] does not guarantee this. *)
 
-let rec fold f s accu =
+let rec inter s1 s2 =
+  match s1, s2 with
+  | N, _
+  | _, N ->
+      empty
+  | C (o1, w1, qs1), C (o2, w2, qs2) ->
+      if o1 < o2 then
+        inter qs1 s2
+      else if o1 > o2 then
+        inter s1 qs2
+      else
+        let ss = W.inter w1 w2 in
+        let s = inter qs1 qs2 in
+        if W.is_empty ss then s else
+        if W.equal ss w1 && s == qs1 then s1 else C (o1, ss, s)
+
+let rec diff s1 s2 =
+  match s1, s2 with
+  | N, _
+  | _, N ->
+      s1
+  | C (o1, w1, qs1), C (o2, w2, qs2) ->
+      if o1 < o2 then
+        let qs1' = diff qs1 s2 in
+        if qs1' == qs1 then s1 else C (o1, w1, qs1')
+      else if o1 > o2 then
+        diff s1 qs2
+      else
+        let ss = W.diff w1 w2 in
+        if W.is_empty ss then
+          diff qs1 qs2
+        else
+          let qs1' = diff qs1 qs2 in
+          if W.equal ss w1 && qs1' == qs1 then s1 else C (o1, ss, qs1')
+
+let rec above1 base i s =
   match s with
   | N ->
-      accu
-  | C (addr, ss, qs) ->
-      let accu = W.fold_delta addr f ss accu in
-      fold f qs accu
+      empty
+  | C (o, w, qs) ->
+      if base < o then
+        (* Stop now. *)
+        s
+      else if base = o then
+        (* Found appropriate cell, split bit field. *)
+        let ss' = W.above i w in
+        if W.is_empty ss' then
+          qs
+        else if W.equal w ss' then
+          s
+        else
+          C (o, ss', qs)
+      else
+        (* Not there yet, continue. *)
+        above1 base i qs
 
-let rec iter f s =
-  match s with
-  | N ->
-      ()
-  | C (addr, ss, qs) ->
-      W.iter_delta addr f ss;
-      iter f qs
+let[@inline] above x s =
+  let i = x mod W.bound in
+  let base = x - i in
+  above1 base i s
+
+(* -------------------------------------------------------------------------- *)
+
+(* Cardinality. *)
+
+let[@inline] is_empty s =
+  match s with N -> true | C _ -> false
 
 let is_singleton s =
   match s with
@@ -159,17 +216,70 @@ let is_singleton s =
 
 let rec cardinal accu s =
   match s with
-  | C (_, ss, qs) ->
-      let accu = accu + W.cardinal ss in
+  | C (_, w, qs) ->
+      let accu = accu + W.cardinal w in
       cardinal accu qs
   | N ->
       accu
 
-let cardinal s =
+let[@inline] cardinal s =
   cardinal 0 s
 
-let elements s =
-  fold (fun tl hd -> tl :: hd) s []
+(* -------------------------------------------------------------------------- *)
+
+(* Tests. *)
+
+let rec mem1 base i s =
+  match s with
+  | N ->
+      false
+  | C (o, w, qs) ->
+      if base < o then
+        false
+      else if base = o then
+        W.mem i w
+      else
+        mem1 base i qs
+
+let[@inline] mem x s =
+  let i = x mod W.bound in
+  let base = x - i in
+  mem1 base i s
+
+let rec equal s1 s2 =
+  s1 == s2 ||
+  match s1, s2 with
+  | N, N ->
+      true
+  | C _, N
+  | N, C _ ->
+      false
+  | C (o1, w1, qs1), C (o2, w2, qs2) ->
+      o1 = o2 && W.equal w1 w2 && equal qs1 qs2
+
+let rec compare s1 s2 =
+  if s1 == s2 then 0 else
+  match s1, s2 with
+  | N  , N ->  0
+  | C _, N -> +1
+  | N, C _ -> -1
+  | C (o1, w1, qs1), C (o2, w2, qs2) ->
+      let c = compare_offsets o1 o2 in if c <> 0 then c else
+      let c = W.compare w1 w2 in if c <> 0 then c else
+      let c = compare qs1 qs2 in c
+
+let rec disjoint s1 s2 =
+  match s1, s2 with
+  | N, _
+  | _, N ->
+      true
+  | C (o1, w1, qs1), C (o2, w2, qs2) ->
+      if o1 = o2 then
+        W.disjoint w1 w2 && disjoint qs1 qs2
+      else if o1 < o2 then
+        disjoint qs1 s2
+      else
+        disjoint s1 qs2
 
 let rec subset s1 s2 =
   match s1, s2 with
@@ -177,60 +287,43 @@ let rec subset s1 s2 =
       true
   | _, N ->
       false
-  | C (addr1, ss1, qs1), C (addr2, ss2, qs2) ->
-      if addr1 < addr2 then
+  | C (o1, w1, qs1), C (o2, w2, qs2) ->
+      if o1 < o2 then
         false
-      else if addr1 = addr2 then
-        W.subset ss1 ss2 && subset qs1 qs2
+      else if o1 = o2 then
+        W.subset w1 w2 && subset qs1 qs2
       else
         subset s1 qs2
 
-(* [union] preserves sharing (if possible) between its second argument
-   and its result. *)
-
-let rec union s1 s2 =
-  match s1, s2 with
-  | N, s
-  | s, N ->
-      s
-  | C (addr1, ss1, qs1), C (addr2, ss2, qs2) ->
-      if addr1 < addr2 then
-        C (addr1, ss1, union qs1 s2)
-      else if addr1 > addr2 then
-        let s = union s1 qs2 in
-        if s == qs2 then s2 else C (addr2, ss2, s)
+let rec quick_subset1 o1 w1 s2 =
+  match s2 with
+  | N ->
+      false
+  | C (o2, w2, qs2) ->
+      if o1 = o2 then
+        W.quick_subset w1 w2
       else
-        let ss = W.union ss1 ss2 in
-        let s = union qs1 qs2 in
-        if W.equal ss ss2 && s == qs2 then s2 else C (addr1, ss, s)
+        o1 > o2 && quick_subset1 o1 w1 qs2
 
-(* [inter] arbitrarily attempts to preserve sharing between its first
-   argument and its result. *)
+let[@inline] quick_subset s1 s2 =
+  match s1 with
+  | N ->
+      false
+  | C (o1, w1, _) ->
+      (* [w1] must be not empty. Therefore it suffices to test whether the
+         elements represented by [o1] and [w1] appear in the set [s2]. *)
+      quick_subset1 o1 w1 s2
 
-let rec inter s1 s2 =
-  match s1, s2 with
-  | N, _
-  | _, N ->
-      N
-  | C (addr1, ss1, qs1), C (addr2, ss2, qs2) ->
-      if addr1 < addr2 then
-        inter qs1 s2
-      else if addr1 > addr2 then
-        inter s1 qs2
-      else
-        let ss = W.inter ss1 ss2 in
-        let s = inter qs1 qs2 in
-        if W.is_empty ss then
-          s
-        else
-          if W.equal ss ss1 && s == qs1 then s1 else C (addr1, ss, s)
+(* -------------------------------------------------------------------------- *)
 
-let minimum s =
+(* Extraction. *)
+
+let[@inline] minimum s =
   match s with
   | N ->
       raise Not_found
-  | C (addr, ss, _) ->
-      addr + W.minimum ss
+  | C (o, w, _) ->
+      o + W.minimum w
 
 let rec maximum1 o w s =
   match s with
@@ -249,177 +342,92 @@ let maximum s =
 let choose =
   minimum
 
-let rec compare x y =
-  if x == y then 0 else
-    match x, y with
-    | C (a1, ss1, qs1), C (a2, ss2, qs2) ->
-      begin match compare_offsets a1 a2 with
-        | 0 -> begin match W.compare ss1 ss2 with
-            | 0 -> compare qs1 qs2
-            | n -> n
-          end
-        | n -> n
-      end
-    | N, N -> 0
-    | C _, N -> 1
-    | N, C _ -> -1
+(* -------------------------------------------------------------------------- *)
 
-let rec equal x y =
-  (x == y) ||
-  match x, y with
-  | C (a1, ss1, qs1), C (a2, ss2, qs2) ->
-    a1 = a2 &&
-    W.equal ss1 ss2 &&
-    equal qs1 qs2
-  | N, N -> true
-  | C _, N | N, C _ -> false
+(* Iteration. *)
 
-let rec disjoint s1 s2 =
-  match s1, s2 with
-  | N, _
-  | _, N ->
-      true
-  | C (addr1, ss1, qs1), C (addr2, ss2, qs2) ->
-      if addr1 = addr2 then
-        W.disjoint ss1 ss2 && disjoint qs1 qs2
-      else if addr1 < addr2 then
-        disjoint qs1 s2
-      else
-        disjoint s1 qs2
-
-let rec quick_subset a1 ss1 = function
+let rec iter yield s =
+  match s with
   | N ->
-      false
-  | C (a2, ss2, qs2) ->
-      if a1 = a2 then
-        W.quick_subset ss1 ss2
-      else
-        (a1 > a2 && quick_subset a1 ss1 qs2)
+      ()
+  | C (o, w, qs) ->
+      W.iter_delta o yield w;
+      iter yield qs
 
-let quick_subset s1 s2 =
-  match s1 with
+let rec fold yield s accu =
+  match s with
   | N ->
-      false
-  | C (a1, ss1, _) ->
-      (* We know that, by construction, [ss1] is not empty. It suffices to
-         test whether [s2] has elements in common with [ss1] at address [a1]. *)
-      quick_subset a1 ss1 s2
+      accu
+  | C (o, w, qs) ->
+      let accu = W.fold_delta o yield w accu in
+      fold yield qs accu
+
+let[@inline] elements s =
+  fold (fun tl hd -> tl :: hd) s []
+
+(* -------------------------------------------------------------------------- *)
+
+(* Decomposition. *)
 
 let compare_minimum s1 s2 =
   match s1, s2 with
-  | N, N ->
-      0
-  | N, _ ->
-      -1
-  | _, N ->
-      1
-  | C (addr1, ss1, _), C (addr2, ss2, _) ->
-      match Int.compare addr1 addr2 with
-      | 0 -> W.compare_minimum ss1 ss2
-      | n -> n
+  | N, N ->  0
+  | N, _ -> -1
+  | _, N -> +1
+  | C (o1, w1, _), C (o2, w2, _) ->
+      let c = Int.compare o1 o2 in if c <> 0 then c else
+      W.compare_minimum w1 w2
 
-let sorted_union xs =
-  (* It is important to start folding from the right end of the list. Since
-     elements are sorted, by starting from the right end, we only prepend
-     elements. This makes the algorithm linear in the number of items.
-     Starting from the left end would make it quadratic, revisiting the
-     prefix of a list that gets longer and longer as elements are added. *)
-  List.fold_right union xs empty
+let[@inline] sorted_union ss =
+  (* The list [ss] is sorted. By starting from its right end, we repeatedly
+     prepend elements to the accumulator. This makes the complexity of this
+     algorithm linear in the length of the list [ss]. Starting from the left
+     end would make it quadratic. *)
+  List.fold_right union ss empty
 
-let rec extract_unique_prefix addr2 ss2 = function
+let rec extract_unique_prefix1 o2 w2 s1 =
+  match s1 with
   | N ->
-      N, N
-  | C (addr1, ss1, qs1) as self ->
-    if addr1 < addr2 then
-      let prefix, suffix = extract_unique_prefix addr2 ss2 qs1 in
-      C (addr1, ss1, prefix), suffix
-    else if addr1 > addr2 || W.equal ss1 ss2 then
-      N, self
-    else
-      (* l and r have the same address, and
-         l has some prefix that is not part of r (lsb l < lsb r)*)
-      let ss0, ss1 = W.extract_unique_prefix ss1 ss2 in
-      if W.is_empty ss0 then
-        N, self
-      else if W.is_empty ss1 then
-        (C (addr1, ss0, N), qs1)
+      empty, empty
+  | C (o1, w1, qs1) ->
+      if o1 < o2 then
+        let head1, tail1 = extract_unique_prefix1 o2 w2 qs1 in
+        (if qs1 == head1 then s1 else C (o1, w1, head1)),
+        tail1
+      else if o1 > o2 || W.equal w1 w2 then
+        empty, s1
       else
-        (C (addr1, ss0, N), C (addr1, ss1, qs1))
+        let w1a, w1b = W.extract_unique_prefix w1 w2 in
+        if W.is_empty w1a then
+          empty, s1
+        else
+          C (o1, w1a, empty),
+          if W.is_empty w1b then qs1 else
+          if w1 == w1b then s1 else C (o1, w1b, qs1)
 
-let extract_unique_prefix l r =
-  match l, r with
-  | N, _ ->
-      N, N
+let[@inline] extract_unique_prefix s1 s2 =
+  assert (not (is_empty s2));
+  match s1, s2 with
+  | N, _
   | _, N ->
-      invalid_arg "extract_unique_prefix"
-  | l, C (addr2, ss2, _) ->
-      extract_unique_prefix addr2 ss2 l
+      empty, empty
+  | _, C (o2, w2, _) ->
+      extract_unique_prefix1 o2 w2 s1
 
 let rec extract_shared_prefix s1 s2 =
   match s1, s2 with
-  | C (addr1, ss1, qs1), C (addr2, ss2, qs2)
-    when addr1 = addr2 ->
-      if W.equal ss1 ss2 then
-        let common, rest = extract_shared_prefix qs1 qs2 in
-        (C (addr1, ss1, common), rest)
+  | C (o1, w1, qs1), C (o2, w2, qs2) when o1 = o2 ->
+      if W.equal w1 w2 then
+        let head, tails = extract_shared_prefix qs1 qs2 in
+        C (o1, w1, head), tails
       else
-        let common, (ss1, ss2) = W.extract_shared_prefix ss1 ss2 in
-        let common = if W.is_empty common then N else C (addr1, common, N) in
-        let qs1 = if W.is_empty ss1 then qs1 else C (addr1, ss1, qs1) in
-        let qs2 = if W.is_empty ss2 then qs2 else C (addr2, ss2, qs2) in
-        common, (qs1, qs2)
-  | (l, r) ->
-      N, (l, r)
-
-let rec diff s1 s2 =
-  match s1, s2 with
-  | N, _ | _, N ->
-      s1
-  | C (addr1, ss1, qs1), C (addr2, ss2, qs2) ->
-      if addr1 < addr2 then (
-        let qs1' = diff qs1 s2 in
-        if qs1' == qs1 then
-          s1
-        else
-          C (addr1, ss1, qs1')
-      )
-      else if addr1 > addr2 then
-        diff s1 qs2
-      else
-        let ss = W.diff ss1 ss2 in
-        if W.is_empty ss then
-          diff qs1 qs2
-        else
-          let qs1' = diff qs1 qs2 in
-          if W.equal ss ss1 && qs1' == qs1 then
-            s1
-          else
-            C (addr1, ss, qs1')
-
-let above elt s =
-  let offset = elt mod W.bound in
-  let base = elt - offset in
-  let rec loop = function
-    | N ->
-        N
-    | C (base', ss, qs) as s ->
-        if base < base' then
-          (* Stop now. *)
-          s
-        else if base = base' then
-          (* Found appropriate cell, split bit field. *)
-          let ss' = W.above offset ss in
-          if W.is_empty ss' then
-            qs
-          else if W.equal ss ss' then
-            s
-          else
-            C (base', ss', qs)
-        else
-          (* Not there yet, continue. *)
-          loop qs
-  in
-  loop s
+        let head, (w1, w2) = W.extract_shared_prefix w1 w2 in
+        let head = construct o1 head empty in
+        let qs1 = construct o1 w1 qs1 in
+        let qs2 = construct o2 w2 qs2 in
+        head, (qs1, qs2)
+  | _, _ ->
+      empty, (s1, s2)
 
 exception Found of elt
 
