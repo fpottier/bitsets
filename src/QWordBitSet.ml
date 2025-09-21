@@ -10,13 +10,30 @@
 (*                                                                            *)
 (******************************************************************************)
 
+module W =
+  WordBitSet
+
+let bound =
+  4 * W.bound
+
+let quarter =
+  1 * W.bound
+
+let middle =
+  2 * W.bound
+
+let quarter3 =
+  3 * W.bound
+
+type elt =
+  int
+
+(* A bit set is represented as a quadruple of words. *)
+
 (* In principle, we could and should implement this data structure as a pair
    of two bit sets of type [DWordBitSet.t]. However, we wish to avoid nesting
    heap-allocated pairs, so we have to manually copy and adapt the code in
    [DWordBitSet]. *)
-
-module W =
-  WordBitSet
 
 type t =
   | E
@@ -34,21 +51,6 @@ let check s =
   | Q (hhi, hlo, lhi, llo) ->
       if W.is_empty hhi && W.is_empty hlo && W.is_empty lhi && W.is_empty llo then
         assert false
-
-type elt =
-  int
-
-let bound =
-  4 * W.bound
-
-let quarter3 =
-  3 * W.bound
-
-let middle =
-  2 * W.bound
-
-let quarter =
-  1 * W.bound
 
 let empty =
   E
