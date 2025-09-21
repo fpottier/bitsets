@@ -1,7 +1,7 @@
 {0 Bitsets}
 
 [bitsets] is an OCaml library that offers efficient implementations
-of several kinds of bit sets.
+of several varieties of immutable bit sets.
 
 {1 API}
 

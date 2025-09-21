@@ -10,10 +10,10 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(**This module offers bit sets that fit within one word of memory, that is,
-   one OCaml value of type [int]. These bit sets can store integer values in
-   the semi-open interval [\[0, bound)], where [bound] is [Sys.word_size - 1],
-   that is, usually 63. *)
+(**This module offers immutable bit sets that fit within one word of memory,
+   that is, one OCaml value of type [int]. These bit sets can store integer
+   values in the semi-open interval [\[0, bound)], where [bound] is
+   [Sys.word_size - 1], that is, usually 63. *)
 
 (**[bound] is [Sys.word_size - 1], that is, usually 63. *)
 val bound: int

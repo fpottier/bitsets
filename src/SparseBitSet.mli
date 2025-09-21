@@ -10,10 +10,10 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(**This module offers bitsets whose elements are not subject to a bound.
-   These bit sets can store arbitrary nonnegative integer values. Their
-   internal representation is sparse: a bit set is represented as a linked
-   list of words. *)
+(**This module offers immutable bit sets whose elements are not subject to
+   a bound. These bit sets can store arbitrary nonnegative integer values.
+   Their internal representation is sparse: a bit set is represented as a
+   linked list of words. *)
 
 (**A bit set represents a set of nonnegative integers. *)
 include API.SET

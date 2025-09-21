@@ -10,7 +10,7 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(**This module offers bit sets that can store integer values in the
+(**This module offers immutable bit sets that can store integer values in the
    semi-open interval [\[0, bound)], where [bound] is chosen by the user. *)
 
 (**[Make] expects an integer parameter [n] and provides an implementation of

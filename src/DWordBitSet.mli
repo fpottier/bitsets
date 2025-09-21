@@ -10,10 +10,10 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(**This module offers bit sets that fit within two words of memory.
-   These bit sets can store integer values in the semi-open interval
-   [\[0, bound)], where [bound] is [2 * WordBitSet.bound], that is,
-   usually 126. *)
+(**This module offers immutable bit sets that fit within two words of
+   memory. These bit sets can store integer values in the semi-open interval
+   [\[0, bound)], where [bound] is [2 * WordBitSet.bound], that is, usually
+   126. *)
 
 (**[bound] is [2 * WordBitSet.bound], that is, usually 126. *)
 val bound: int
