@@ -20,3 +20,8 @@
 # Tests
 
 * Move `comparison` into Monolith.
+
+# Extensions
+
+* Add a type of dense bit sets of fixed-but-unlimited size,
+  represented as an immutable array.
