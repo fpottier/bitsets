@@ -39,6 +39,11 @@ let empty =
    implemented in the form of a physical equality test. (We assume that
    the OCaml compiler does not perform unsharing!) *)
 
+(* Because [is_empty] is supposedly fast, one might wish to add a fast path
+   to many (most) functions, where the case of an empty set receives special
+   treatment. However, this would make the code longer, and it is not clear
+   whether it would be beneficial overall, so it is not done. *)
+
 let[@inline] construct hi lo =
   if W.is_empty hi && W.is_empty lo then
     empty
