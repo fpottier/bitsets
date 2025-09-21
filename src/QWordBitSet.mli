@@ -10,7 +10,7 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(**This module offers bitsets that fit within four words of memory.
+(**This module offers bit sets that fit within four words of memory.
    These bit sets can store integer values in the semi-open interval
    [\[0, bound)], where [bound] is [4 * WordBitSet.bound], that is,
    usually 252. *)
