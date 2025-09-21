@@ -175,11 +175,16 @@ let () =
   let spec = t ^> t ^> comparison in
   declare "compare_minimum" spec R.compare_minimum C.compare_minimum;
 
+          let compose f g x = f (g x) in
+  dprintf {|
+          let compose f g x = f (g x) in
+|};
+
   let spec = list t ^> t in
-  declare "(Fun.compose sorted_union prepare)"
+  declare "(compose sorted_union prepare)"
     spec
-    (Fun.compose R.sorted_union RP.prepare)
-    (Fun.compose C.sorted_union CP.prepare);
+    (compose R.sorted_union RP.prepare)
+    (compose C.sorted_union CP.prepare);
 
   let spec = t ^> R.nonempty % t ^> t *** t in
   declare "extract_unique_prefix" spec
