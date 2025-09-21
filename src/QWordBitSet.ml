@@ -277,6 +277,15 @@ let fold yield s accu =
 let[@inline] elements s =
   fold (fun tl hd -> tl :: hd) s []
 
+exception Found of elt
+
+let find_first_opt p s =
+  try
+    iter (fun x -> if p x then raise (Found x)) s;
+    None
+  with Found x ->
+    Some x
+
 (* -------------------------------------------------------------------------- *)
 
 (* Decomposition. *)

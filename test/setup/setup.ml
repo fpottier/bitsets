@@ -23,6 +23,9 @@ module Make (C : sig
   val name : string
 end) = struct
 
+let () =
+  dprintf "          open %s;;\n" C.name
+
 (* -------------------------------------------------------------------------- *)
 
           let comparison_eq c1 c2 =
@@ -158,6 +161,15 @@ let () =
   let spec = t ^> list elt in
   declare "elements" spec R.rev_elements C.elements;
 
+  (* We test [find_first_opt] with the fixed predicate [div7]. *)
+
+          let div7 x = x mod 7 = 0 in
+  dprintf {|
+          let div7 x = x mod 7 = 0;;
+|};
+  let spec = t ^> option elt in
+  declare "find_first_opt div7" spec (R.find_first_opt div7) (C.find_first_opt div7);
+
   (* Decomposition. *)
 
   let spec = t ^> t ^> comparison in
@@ -184,9 +196,6 @@ let () =
 (* -------------------------------------------------------------------------- *)
 
 (* Start the engine! *)
-
-let () =
-  dprintf "          open %s;;\n" C.name
 
 let () =
   let fuel = 16 in

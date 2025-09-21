@@ -365,6 +365,15 @@ let rec fold yield s accu =
 let[@inline] elements s =
   fold (fun tl hd -> tl :: hd) s []
 
+exception Found of elt
+
+let find_first_opt p s =
+  try
+    iter (fun x -> if p x then raise (Found x)) s;
+    None
+  with Found x ->
+    Some x
+
 (* -------------------------------------------------------------------------- *)
 
 (* Decomposition. *)
@@ -428,22 +437,6 @@ let rec extract_shared_prefix s1 s2 =
         head, (qs1, qs2)
   | _, _ ->
       empty, (s1, s2)
-
-exception Found of elt
-
-let rec find_first f s =
-  match s with
-  | N ->
-      None
-  | C (base, ss, qs) ->
-      W.iter_delta base (fun elt -> if f elt then raise (Found elt)) ss;
-      find_first f qs
-
-let find_first_opt f qs =
-  try
-    find_first f qs
-  with Found elt ->
-    Some elt
 
 type view = t =
   | N

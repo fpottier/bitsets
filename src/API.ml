@@ -125,6 +125,10 @@ module type SET = sig
      in an unspecified order. *)
   val elements: t -> elt list
 
+  (** [find_first_opt p s] returns the least element [x] of [s] such that
+      [p x] is true. It returns [None] if no such element exists. *)
+  val find_first_opt: (elt -> bool) -> t -> elt option
+
   (** {1 Decomposition} *)
 
   (**[compare_minimum], a total order on sets, is defined as follows:

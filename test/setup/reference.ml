@@ -101,3 +101,13 @@ let rec shared_prefix s1 s2 =
 let extract_shared_prefix s1 s2 =
   let head = shared_prefix s1 s2 in
   head, (diff s1 head, diff s2 head)
+
+(* In OCaml's Set module, [find_first_opt] expects a monotonic predicate.
+   We do not want to impose such a restriction while testing, so we roll
+   our own (linear-time) search function. *)
+
+let rec find_first_opt p s =
+  if is_empty s then None else
+  let x = min_elt s in
+  if p x then Some x else
+  find_first_opt p (remove x s)

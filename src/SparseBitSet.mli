@@ -19,10 +19,6 @@
 include API.SET
   with type elt = int
 
-val find_first_opt: (elt -> bool) -> t -> elt option
-(** [find_first_opt f s] returns the least element [x] of [s] such that
-    [f x] is true. It returns [None] if no such element exists. *)
-
 (**The type [view] offers a view of a set as a list of words.
 
    The constructor [N] represents the empty set.
