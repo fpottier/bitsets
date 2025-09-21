@@ -47,16 +47,6 @@ let compare_minimum s1 s2 =
   | false, false ->
       Int.compare (minimum s1) (minimum s2)
 
-(*
-let print_set f s =
-  Printf.fprintf f "[";
-  iter (fun i -> Printf.fprintf f "%d; " i) s;
-  Printf.fprintf f "]"
-
-let print_sets f ss =
-  List.iter (print_set f) ss
- *)
-
 (* [is_slndos ss] determines whether [ss] is a sorted list of disjoint
    non-overlapping sets, that is, a suitable argument for the function
    [sorted_union]. *)
