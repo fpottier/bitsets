@@ -19,16 +19,20 @@
 include API.SET
   with type elt = int
 
-(**The type [view] offers a view of a set as a list of words.
+(**/**)
+
+(* The type [view] and the function [view] are currently not part of
+   the signature [API.SET]. They are not publicly documented. *)
+
+(**The type [view] offers a view of a set as a list of nonempty words.
 
    The constructor [N] represents the empty set.
 
-   The constructor [C (o, word, s)] represents the disjoint union of
-   the set [word], whose inhabitants must be shifted up by [o], and
-   the set [s].
+   The constructor [C (o, w, s)] represents the disjoint union of the
+   nonempty set [w], whose inhabitants must be shifted up by [o],
+   and the set [s].
 
-   The offset [o] is always a multiple of
-   [WordBitSet.bound]. *)
+   An offset [o] is a nonnegative multiple of [WordBitSet.bound]. *)
 type view =
   | N
   | C of offset * word * t
@@ -42,6 +46,5 @@ and word =
 (**The function [view] offers a view of a sparse bit set as a list of words. *)
 val view : t -> view
 
-(**/**)
 (**[check] is used only during testing. *)
 val check : t -> unit

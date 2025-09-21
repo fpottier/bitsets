@@ -438,6 +438,10 @@ let rec extract_shared_prefix s1 s2 =
   | _, _ ->
       empty, (s1, s2)
 
+(* -------------------------------------------------------------------------- *)
+
+(* View. *)
+
 type view = t =
   | N
   | C of offset * word * t
