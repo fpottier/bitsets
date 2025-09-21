@@ -8,6 +8,9 @@ of several kinds of bit sets.
 {!modules:
 Bitsets.WordBitSet
 Bitsets.DWordBitSet
+Bitsets.QWordBitSet
+Bitsets.SparseBitSet
+Bitsets.BoundedBitSet
 }
 
 {1 Installation and Usage}
