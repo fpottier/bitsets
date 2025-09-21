@@ -4,6 +4,7 @@
 SUBDIRS := \
   WordBitSet \
   DWordBitSet \
+  QWordBitSet \
 
 .PHONY: test
 test:
