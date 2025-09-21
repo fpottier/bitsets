@@ -19,4 +19,8 @@
 module Make (N : sig
   val n: int
 end) ()
-: API.SET with type elt = int
+: sig
+  (**[bound] is equal to the user-supplied bound [n]. *)
+  val bound : int
+  include API.SET with type elt = int
+end

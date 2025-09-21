@@ -10,39 +10,31 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(* We select an implementation of bit sets based on the value of [n], which
-   is chosen by the user. *)
+(* This test is not super-interesting, as the implementation of BoundedBitSet
+   is almost trivial; it simply selects an appropriate implementation, based
+   on the value of [n]. *)
 
-(* The functor [Make] must take a dummy argument [()] in order to indicate
-   that it is not an applicative functor. Otherwise, we get a cryptic type
-   error message: "This expression creates fresh types. It is not allowed
-   inside applicative functors." *)
+(* Plus, at the moment, only one (random) choice of [n] is made at the start,
+   then the test runs forever with this value of [n]. This could be remedied
+   by choosing [n] inside Monolith's prologue -- as done in Sek -- but I am
+   lazy. *)
 
-module Make (N : sig
-  val n: int
-end) ()
-= struct
-  open N
+(* Choose a random bound. *)
+let n = Random.int 1024
 
-  let () =
-    assert (n >= 0)
+open Monolith
 
-  let bound = n
+let () =
+  dprintf "          module N = struct\n";
+  dprintf "            let n = %d\n" n;
+  dprintf "          end\n"
 
-  (* An [if] construct in the module language would be welcome. *)
-
-  module type SET =
-    API.SET with type elt = int
-
-  include (val
-    if n <= WordBitSet.bound then
-      (module WordBitSet : SET)
-    else if n <= DWordBitSet.bound then
-      (module DWordBitSet : SET)
-    else if n <= QWordBitSet.bound then
-      (module QWordBitSet : SET)
-    else
-      (module SparseBitSet : SET)
-    : SET)
-
+module B = struct
+  module N = struct let n = n end
+  include Bitsets.BoundedBitSet.Make(N)()
+  let name = Printf.sprintf "Bitsets.BoundedBitSet.Make(N)"
+  let check = ignore
 end
+
+module T =
+  Setup.Make(B)
