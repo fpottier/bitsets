@@ -11,7 +11,7 @@ DATE_WITH_SLASHES := $(shell echo "${DATE}" \
   | sed -e 's|\([0-9][0-9][0-9][0-9]\)\([0-9][0-9]\)\([0-9][0-9]\)|\1/\2/\3|')
 
 # The project's name.
-THIS     := bitsets
+THIS     := vendored_bitsets
 
 # The archive's URL (https).
 ARCHIVE  := https://github.com/fpottier/$(THIS)/archive/$(DATE).tar.gz
@@ -200,6 +200,6 @@ vendor:
 # Copy the library to Menhir's working directory.
 	@ make clean
 	@ make -f Makefile.vendor \
-	    THIS=$(THIS) \
+	    THIS=bitsets \
 	    CLIENTS=$(HOME)/dev/menhir \
 	    SUPERFLUOUS=".git headache.config header.txt test Makefile Makefile.vendor README.md TODO.md play.ml src/index.mld" \
