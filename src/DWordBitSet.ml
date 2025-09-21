@@ -216,8 +216,8 @@ let compare_minimum s1 s2 =
       | false, true  -> -1
       | true , true  -> W.compare_minimum hi1 hi2
 
-let[@inline] sorted_union xs =
-  List.fold_left union empty xs
+let[@inline] sorted_union ss =
+  List.fold_left union empty ss
 
 let extract_unique_prefix s1 s2 =
   assert (not (is_empty s2));
