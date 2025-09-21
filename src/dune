@@ -1,7 +1,7 @@
 ;; This is a library.
 (library
-  (name bitsets)
-  (public_name bitsets)
+  (name vendored_bitsets)
+  (public_name vendored_bitsets)
 )
 
 ;; Warnings are enabled in development builds and disabled in release builds.
@@ -10,6 +10,3 @@
   (dev     (flags :standard -w @A-4-44-67-70))
   (release (flags :standard -noassert       ))
 )
-
-;; Request documentation.
-(documentation)
