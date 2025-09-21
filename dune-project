@@ -1,8 +1,8 @@
 (lang dune 3.18)
-(name bitsets)
+(name vendored_bitsets)
 (generate_opam_files true)
 (package
-  (name bitsets)
+  (name vendored_bitsets)
   (authors "François Pottier <francois.pottier@inria.fr>")
   (maintainers "François Pottier <francois.pottier@inria.fr>")
   (source (uri git+https://github.com/fpottier/bitsets.git))
