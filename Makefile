@@ -184,3 +184,22 @@ undo:
 # Undo the last release (assuming it was done on the same date).
 	@ git tag -d $(DATE)
 	@ git push -u origin :$(DATE)
+
+# ------------------------------------------------------------------------------
+
+# Vendoring this library inside Menhir.
+
+.PHONY: vendor
+vendor:
+# Check if this is the menhir branch.
+	@ if [ "$$(git symbolic-ref --short HEAD)" != "menhir" ] ; then \
+	  echo "Error: this is not the menhir branch." ; \
+	  git branch ; \
+	  exit 1 ; \
+	fi
+# Copy the library to Menhir's working directory.
+	@ make clean
+	@ make -f Makefile.vendor \
+	    THIS=$(THIS) \
+	    CLIENTS=$(HOME)/dev/menhir \
+	    SUPERFLUOUS=".git headache.config header.txt test Makefile Makefile.vendor README.md TODO.md play.ml src/index.mld" \
