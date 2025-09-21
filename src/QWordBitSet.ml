@@ -38,6 +38,10 @@ type elt =
 type t =
   | Q of W.t * W.t * W.t * W.t
 
+(* -------------------------------------------------------------------------- *)
+
+(* Construction. *)
+
 let empty =
   Q (W.empty, W.empty, W.empty, W.empty)
 
@@ -54,9 +58,6 @@ let check s =
      W.is_empty lhi && W.is_empty llo then
         assert (s == empty)
 
-let is_empty s =
-  s == empty
-
 let singleton i =
   if i < middle then
     if i < quarter then
@@ -65,11 +66,11 @@ let singleton i =
       let i = i - quarter in
       Q (W.empty, W.empty, W.singleton i, W.empty)
   else
-    let i = i - middle in
-    if i < quarter then
+    if i < quarter3 then
+      let i = i - middle in
       Q (W.empty, W.singleton i, W.empty, W.empty)
     else
-      let i = i - quarter in
+      let i = i - quarter3 in
       Q (W.singleton i, W.empty, W.empty, W.empty)
 
 let add i s =
@@ -83,12 +84,12 @@ let add i s =
       let lhi' = W.add i lhi in
       if lhi == lhi' then s else Q (hhi, hlo, lhi', llo)
   else
-    let i = i - middle in
-    if i < quarter then
+    if i < quarter3 then
+      let i = i - middle in
       let hlo' = W.add i hlo in
       if hlo == hlo' then s else Q (hhi, hlo', lhi, llo)
     else
-      let i = i - quarter in
+      let i = i - quarter3 in
       let hhi' = W.add i hhi in
       if hhi == hhi' then s else Q (hhi', hlo, lhi, llo)
 
@@ -103,65 +104,14 @@ let remove i s =
       let lhi' = W.remove i lhi in
       if lhi == lhi' then s else construct hhi hlo lhi' llo
   else
-    let i = i - middle in
-    if i < quarter then
+    if i < quarter3 then
+      let i = i - middle in
       let hlo' = W.remove i hlo in
       if hlo == hlo' then s else construct hhi hlo' lhi llo
     else
-      let i = i - quarter in
+      let i = i - quarter3 in
       let hhi' = W.remove i hhi in
       if hhi == hhi' then s else construct hhi' hlo lhi llo
-
-let fold f s accu =
-  let Q (hhi, hlo, lhi, llo) = s in
-  let accu = W.fold f llo accu in
-  let accu = W.fold_delta quarter f lhi accu in
-  let accu = W.fold_delta middle f hlo accu in
-  let accu = W.fold_delta quarter3 f hhi accu in
-  accu
-
-let iter f s =
-  let Q (hhi, hlo, lhi, llo) = s in
-  W.iter f llo;
-  W.iter_delta quarter f lhi;
-  W.iter_delta middle f hlo;
-  W.iter_delta quarter3 f hhi
-
-let is_singleton s =
-  let Q (hhi, hlo, lhi, llo) = s in
-  W.is_singleton hhi && W.is_empty hlo && W.is_empty lhi && W.is_empty llo ||
-  W.is_empty hhi && W.is_singleton hlo && W.is_empty lhi && W.is_empty llo ||
-  W.is_empty hhi && W.is_empty hlo && W.is_singleton lhi && W.is_empty llo ||
-  W.is_empty hhi && W.is_empty hlo && W.is_empty lhi && W.is_singleton llo
-
-let cardinal s =
-  let Q (hhi, hlo, lhi, llo) = s in
-  W.cardinal hhi + W.cardinal hlo + W.cardinal lhi + W.cardinal llo
-
-let elements s =
-  fold (fun tl hd -> tl :: hd) s []
-
-let subset s1 s2 =
-  let Q (hhi1, hlo1, lhi1, llo1) = s1
-  and Q (hhi2, hlo2, lhi2, llo2) = s2 in
-  W.subset hhi1 hhi2 && W.subset hlo1 hlo2 &&
-  W.subset lhi1 lhi2 && W.subset llo1 llo2
-
-let mem i s =
-  let Q (hhi, hlo, lhi, llo) = s in
-  if i < middle then
-    if i < quarter then
-      W.mem i llo
-    else
-      let i = i - quarter in
-      W.mem i lhi
-  else
-    let i = i - middle in
-    if i < quarter then
-      W.mem i hlo
-    else
-      let i = i - quarter in
-      W.mem i hhi
 
 let union s1 s2 =
   let Q (hhi1, hlo1, lhi1, llo1) = s1
@@ -189,14 +139,96 @@ let diff s1 s2 =
 
 let above x s =
   let Q (hhi, hlo, lhi, llo) = s in
-  if x < quarter then
-    construct hhi hlo lhi (W.above x llo)
-  else if x < middle then
-    construct hhi hlo (W.above (x - quarter) lhi) W.empty
-  else if x < quarter3 then
-    construct hhi (W.above (x - middle) hlo) W.empty W.empty
+  if x < middle then
+    if x < quarter then
+      construct hhi hlo lhi (W.above x llo)
+    else
+      construct hhi hlo (W.above (x - quarter) lhi) W.empty
   else
-    construct (W.above (x - quarter3) hhi) W.empty W.empty W.empty
+    if x < quarter3 then
+      construct hhi (W.above (x - middle) hlo) W.empty W.empty
+    else
+      construct (W.above (x - quarter3) hhi) W.empty W.empty W.empty
+
+(* -------------------------------------------------------------------------- *)
+
+(* Cardinality. *)
+
+let[@inline] is_empty s =
+  s == empty
+
+let is_singleton s =
+  let Q (hhi, hlo, lhi, llo) = s in
+  W.is_empty lhi && W.is_empty llo && (
+    W.is_empty hhi && W.is_singleton hlo ||
+    W.is_singleton hhi && W.is_empty hlo
+  )
+  ||
+  W.is_empty hhi && W.is_empty hlo && (
+    W.is_empty lhi && W.is_singleton llo ||
+    W.is_singleton lhi && W.is_empty llo
+  )
+
+let cardinal s =
+  let Q (hhi, hlo, lhi, llo) = s in
+  W.cardinal hhi + W.cardinal hlo + W.cardinal lhi + W.cardinal llo
+
+(* -------------------------------------------------------------------------- *)
+
+(* Tests. *)
+
+let mem i s =
+  let Q (hhi, hlo, lhi, llo) = s in
+  if i < middle then
+    if i < quarter then
+      W.mem i llo
+    else
+      let i = i - quarter in
+      W.mem i lhi
+  else
+    if i < quarter3 then
+      let i = i - middle in
+      W.mem i hlo
+    else
+      let i = i - quarter3 in
+      W.mem i hhi
+
+let equal s1 s2 =
+  s1 == s2 ||
+  let Q (hhi1, hlo1, lhi1, llo1) = s1
+  and Q (hhi2, hlo2, lhi2, llo2) = s2 in
+  W.equal hhi1 hhi2 &&
+  W.equal hlo1 hlo2 &&
+  W.equal lhi1 lhi2 &&
+  W.equal llo1 llo2
+
+let compare s1 s2 =
+  if s1 == s2 then 0 else
+  let Q (hhi1, hlo1, lhi1, llo1) = s1
+  and Q (hhi2, hlo2, lhi2, llo2) = s2 in
+  let c = W.compare hhi1 hhi2 in if c <> 0 then c else
+  let c = W.compare hlo1 hlo2 in if c <> 0 then c else
+  let c = W.compare lhi1 lhi2 in if c <> 0 then c else
+  let c = compare llo1 llo2 in c
+
+let disjoint s1 s2 =
+  let Q (hhi1, hlo1, lhi1, llo1) = s1
+  and Q (hhi2, hlo2, lhi2, llo2) = s2 in
+  W.disjoint hhi1 hhi2 && W.disjoint hlo1 hlo2 &&
+  W.disjoint lhi1 lhi2 && W.disjoint llo1 llo2
+
+let subset s1 s2 =
+  let Q (hhi1, hlo1, lhi1, llo1) = s1
+  and Q (hhi2, hlo2, lhi2, llo2) = s2 in
+  W.subset hhi1 hhi2 && W.subset hlo1 hlo2 &&
+  W.subset lhi1 lhi2 && W.subset llo1 llo2
+
+let[@inline] quick_subset s1 s2 =
+  not (disjoint s1 s2)
+
+(* -------------------------------------------------------------------------- *)
+
+(* Extraction. *)
 
 let minimum s =
   let Q (hhi, hlo, lhi, llo) = s in
@@ -223,105 +255,106 @@ let maximum s =
 let choose =
   minimum
 
-let compare s1 s2 =
-  if s1 == s2 then 0 else
-  let Q (hhi1, hlo1, lhi1, llo1) = s1
-  and Q (hhi2, hlo2, lhi2, llo2) = s2 in
-  let c = W.compare hhi1 hhi2 in if c <> 0 then c else
-  let c = W.compare hlo1 hlo2 in if c <> 0 then c else
-  let c = W.compare lhi1 lhi2 in if c <> 0 then c else
-  let c = compare llo1 llo2 in c
+(* -------------------------------------------------------------------------- *)
 
-let equal s1 s2 =
-  (s1 == s2) ||
-  let Q (hhi1, hlo1, lhi1, llo1) = s1
-  and Q (hhi2, hlo2, lhi2, llo2) = s2 in
-  W.equal hhi1 hhi2 &&
-  W.equal hlo1 hlo2 &&
-  W.equal lhi1 lhi2 &&
-  W.equal llo1 llo2
+(* Iteration. *)
 
-let disjoint s1 s2 =
-  let Q (hhi1, hlo1, lhi1, llo1) = s1
-  and Q (hhi2, hlo2, lhi2, llo2) = s2 in
-  W.disjoint hhi1 hhi2 && W.disjoint hlo1 hlo2 &&
-  W.disjoint lhi1 lhi2 && W.disjoint llo1 llo2
+let iter yield s =
+  let Q (hhi, hlo, lhi, llo) = s in
+  W.iter yield llo;
+  W.iter_delta quarter yield lhi;
+  W.iter_delta middle yield hlo;
+  W.iter_delta quarter3 yield hhi
 
-let[@inline] quick_subset s1 s2 =
-  not (disjoint s1 s2)
+let fold yield s accu =
+  let Q (hhi, hlo, lhi, llo) = s in
+  let accu = W.fold yield llo accu in
+  let accu = W.fold_delta quarter yield lhi accu in
+  let accu = W.fold_delta middle yield hlo accu in
+  let accu = W.fold_delta quarter3 yield hhi accu in
+  accu
+
+let[@inline] elements s =
+  fold (fun tl hd -> tl :: hd) s []
+
+(* -------------------------------------------------------------------------- *)
+
+(* Decomposition. *)
 
 let compare_minimum s1 s2 =
   match is_empty s1, is_empty s2 with
-  | true, true  ->  0
-  | true, false -> -1
-  | false, true -> +1
+  | true , true  ->  0
+  | true , false -> -1
+  | false, true  -> +1
   | false, false ->
       let Q (hhi1, hlo1, lhi1, llo1) = s1
       and Q (hhi2, hlo2, lhi2, llo2) = s2 in
       match W.is_empty llo1, W.is_empty llo2 with
       | false, false -> W.compare_minimum llo1 llo2
-      | true , false -> 1
+      | true , false -> +1
       | false, true  -> -1
       | true , true  ->
-        match W.is_empty lhi1, W.is_empty lhi2 with
-        | false, false -> W.compare_minimum lhi1 lhi2
-        | true , false -> 1
-        | false, true  -> -1
-        | true , true  ->
-          match W.is_empty hlo1, W.is_empty hlo2 with
-          | false, false -> W.compare_minimum hlo1 hlo2
-          | true , false -> 1
+          match W.is_empty lhi1, W.is_empty lhi2 with
+          | false, false -> W.compare_minimum lhi1 lhi2
+          | true , false -> +1
           | false, true  -> -1
           | true , true  ->
-            W.compare_minimum hhi1 hhi2
+              match W.is_empty hlo1, W.is_empty hlo2 with
+              | false, false -> W.compare_minimum hlo1 hlo2
+              | true , false -> +1
+              | false, true  -> -1
+              | true , true  ->
+                  W.compare_minimum hhi1 hhi2
 
-let sorted_union xs =
+let[@inline] sorted_union xs =
   List.fold_left union empty xs
 
 let extract_unique_prefix s1 s2 =
   assert (not (is_empty s2));
   let Q (hhi1, hlo1, lhi1, llo1) = s1
   and Q (hhi2, hlo2, lhi2, llo2) = s2 in
-  if not (W.is_empty llo2) then (
-    let p, r = W.extract_unique_prefix llo1 llo2 in
-    construct W.empty W.empty W.empty p,
-    construct hhi1 hlo1 lhi1 r
-  ) else if not (W.is_empty lhi2) then (
-    let p, r = W.extract_unique_prefix lhi1 lhi2 in
-    construct W.empty W.empty p llo1,
-    construct hhi1 hlo1 r W.empty
-  ) else if not (W.is_empty hlo2) then (
-    let p, r = W.extract_unique_prefix hlo1 hlo2 in
-    construct W.empty p lhi1 llo1,
-    construct hhi1 r W.empty W.empty
-  ) else (
-    let p, r = W.extract_unique_prefix hhi1 hhi2 in
-    construct p hlo1 lhi1 llo1,
-    construct r W.empty W.empty W.empty
-  )
+  if W.equal llo1 llo2 && W.equal lhi1 lhi2 &&
+     W.equal hlo1 hlo2 && W.equal hhi1 hhi2
+  then empty, s1 else (* fast path *)
+  if not (W.is_empty llo2) then
+    let llo1a, llo1b = W.extract_unique_prefix llo1 llo2 in
+    construct W.empty W.empty W.empty llo1a,
+    construct hhi1 hlo1 lhi1 llo1b
+  else if not (W.is_empty lhi2) then
+    let lhi1a, lhi1b = W.extract_unique_prefix lhi1 lhi2 in
+    construct W.empty W.empty lhi1a llo1,
+    construct hhi1 hlo1 lhi1b W.empty
+  else if not (W.is_empty hlo2) then
+    let hlo1a, hlo1b = W.extract_unique_prefix hlo1 hlo2 in
+    construct W.empty hlo1a lhi1 llo1,
+    construct hhi1 hlo1b W.empty W.empty
+  else
+    let hhi1a, hhi1b = W.extract_unique_prefix hhi1 hhi2 in
+    construct hhi1a hlo1 lhi1 llo1,
+    construct hhi1b W.empty W.empty W.empty
 
 let extract_shared_prefix s1 s2 =
   let Q (hhi1, hlo1, lhi1, llo1) = s1
   and Q (hhi2, hlo2, lhi2, llo2) = s2 in
   if not (W.equal llo1 llo2) then
-    let ll, (llo1, llo2) = W.extract_shared_prefix llo1 llo2 in
-    construct W.empty W.empty W.empty ll,
+    let llo, (llo1, llo2) = W.extract_shared_prefix llo1 llo2 in
+    construct W.empty W.empty W.empty llo,
     (construct hhi1 hlo1 lhi1 llo1,
      construct hhi2 hlo2 lhi2 llo2)
   else if not (W.equal lhi1 lhi2) then
-    let lh, (lhi1, lhi2) = W.extract_shared_prefix lhi1 lhi2 in
-    construct W.empty W.empty lh llo1,
+    let lhi, (lhi1, lhi2) = W.extract_shared_prefix lhi1 lhi2 in
+    construct W.empty W.empty lhi llo1,
     (construct hhi1 hlo1 lhi1 W.empty,
      construct hhi2 hlo2 lhi2 W.empty)
   else if not (W.equal hlo1 hlo2) then
-    let hl, (hlo1, hlo2) = W.extract_shared_prefix hlo1 hlo2 in
-    construct W.empty hl lhi1 llo1,
+    let hlo, (hlo1, hlo2) = W.extract_shared_prefix hlo1 hlo2 in
+    construct W.empty hlo lhi1 llo1,
     (construct hhi1 hlo1 W.empty W.empty,
      construct hhi2 hlo2 W.empty W.empty)
   else if not (W.equal hhi1 hhi2) then
-    let hh, (hhi1, hhi2) = W.extract_shared_prefix hhi1 hhi2 in
-    construct hh hlo1 lhi1 llo1,
+    let hhi, (hhi1, hhi2) = W.extract_shared_prefix hhi1 hhi2 in
+    construct hhi hlo1 lhi1 llo1,
     (construct hhi1 W.empty W.empty W.empty,
      construct hhi2 W.empty W.empty W.empty)
-  else (* TODO useless branch? *)
+  else
     s1, (empty, empty)
