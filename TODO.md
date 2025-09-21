@@ -2,8 +2,16 @@
 
 # API
 
+* The specification of `sorted_union` is more restrictive
+  than it could be. (The sets need not be disjoint.)
+  Also, perhaps we should offer an iterated-union function
+  which sorts internally.
+
 * In `SET`, check whether `add`, `remove`, `inter`
+  and other functions
   should offer a physical equality guarantee.
+  Also, re-read the code and check which allocations could be avoided
+  by re-using an existing object.
 
 * In `SET`, maybe expose `singleton_minimum`, which is very efficient.
 
@@ -20,6 +28,8 @@
 # Tests
 
 * Move `comparison` into Monolith.
+
+* Find a way of testing `compare`.
 
 # Extensions
 
