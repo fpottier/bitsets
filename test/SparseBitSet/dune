@@ -1,0 +1,5 @@
+(executable
+  (name test)
+  (libraries setup)
+  (enabled_if (= %{profile} dev))
+)
