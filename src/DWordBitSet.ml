@@ -98,10 +98,10 @@ let diff s1 s2 =
 
 let above x s =
   let D (hi, lo) = s in
-  if W.bound <= x then
-    construct (W.above (x - W.bound) hi) W.empty
-  else
+  if x < W.bound then
     construct hi (W.above x lo)
+  else
+    construct (W.above (x - W.bound) hi) W.empty
 
 (* -------------------------------------------------------------------------- *)
 
