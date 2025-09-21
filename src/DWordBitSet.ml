@@ -223,23 +223,27 @@ let extract_unique_prefix s1 s2 =
   assert (not (is_empty s2));
   let D (hi1, lo1) = s1
   and D (hi2, lo2) = s2 in
-  if W.is_empty lo2 then
-    (* [lo1] is entirely part of the unique prefix; [hi1] must be split. *)
-    let hi1a, hi1b = W.extract_unique_prefix hi1 hi2 in
-    construct hi1a lo1, construct hi1b W.empty
-  else
+  if W.equal hi1 hi2 && W.equal lo1 lo2 then empty, s1 else (* fast path *)
+  if not (W.is_empty lo2) then
     (* [lo1] must be split; [hi1] is entirely outside of the unique prefix. *)
     let lo1a, lo1b = W.extract_unique_prefix lo1 lo2 in
     construct W.empty lo1a, construct hi1 lo1b
+  else
+    (* [lo1] is entirely part of the unique prefix; [hi1] must be split. *)
+    let hi1a, hi1b = W.extract_unique_prefix hi1 hi2 in
+    construct hi1a lo1, construct hi1b W.empty
 
 let extract_shared_prefix s1 s2 =
   let D (hi1, lo1) = s1
   and D (hi2, lo2) = s2 in
-  if W.equal lo1 lo2 then
+  if not (W.equal lo1 lo2) then
+    (* The shared prefix is a fragment of [lo]. *)
+    let lo, (lo1, lo2) = W.extract_shared_prefix lo1 lo2 in
+    construct W.empty lo, (construct hi1 lo1, construct hi2 lo2)
+  else if not (W.equal hi1 hi2) then
     (* [lo1] is entirely part of the shared prefix. *)
     let hi, (hi1, hi2) = W.extract_shared_prefix hi1 hi2 in
     construct hi lo1, (construct hi1 W.empty, construct hi2 W.empty)
   else
-    (* The shared prefix is a fragment of [lo]. *)
-    let lo, (lo1, lo2) = W.extract_shared_prefix lo1 lo2 in
-    construct W.empty lo, (construct hi1 lo1, construct hi2 lo2)
+    (* [s1] and [s2] are equal. *)
+    s1, (empty, empty)
