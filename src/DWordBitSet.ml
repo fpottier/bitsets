@@ -88,8 +88,8 @@ let union s1 s2 =
   and D (hi2, lo2) = s2 in
   let hi = W.union hi1 hi2
   and lo = W.union lo1 lo2 in
-  if hi1 == hi && lo1 == lo then s1 else
   if hi2 == hi && lo2 == lo then s2 else
+  if hi1 == hi && lo1 == lo then s1 else
   D (hi, lo)
 
 let inter s1 s2 =
@@ -97,8 +97,8 @@ let inter s1 s2 =
   and D (hi2, lo2) = s2 in
   let hi = W.inter hi1 hi2
   and lo = W.inter lo1 lo2 in
-  if hi1 == hi && lo1 == lo then s1 else
   if hi2 == hi && lo2 == lo then s2 else
+  if hi1 == hi && lo1 == lo then s1 else
   construct hi lo
 
 let diff s1 s2 =

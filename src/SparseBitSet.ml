@@ -137,8 +137,8 @@ let rec union s1 s2 =
       else
         let w = W.union w1 w2 in
         let qs = union qs1 qs2 in
-        if W.equal w1 w && qs1 == qs then s1 else
         if W.equal w2 w && qs2 == qs then s2 else
+        if W.equal w1 w && qs1 == qs then s1 else
         C (o1, w, qs)
 
 let rec inter s1 s2 =
@@ -154,8 +154,8 @@ let rec inter s1 s2 =
       else
         let w = W.inter w1 w2 in
         let qs = inter qs1 qs2 in
-        if W.equal w1 w && qs1 == qs then s1 else
         if W.equal w2 w && qs2 == qs then s2 else
+        if W.equal w1 w && qs1 == qs then s1 else
         construct o1 w qs
 
 let rec diff s1 s2 =

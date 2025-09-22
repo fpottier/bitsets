@@ -128,8 +128,8 @@ let union s1 s2 =
   and hlo = W.union hlo1 hlo2
   and lhi = W.union lhi1 lhi2
   and llo = W.union llo1 llo2 in
-  if hhi1 == hhi && hlo1 == hlo && lhi1 == lhi && llo1 == llo then s1 else
   if hhi2 == hhi && hlo2 == hlo && lhi2 == lhi && llo2 == llo then s2 else
+  if hhi1 == hhi && hlo1 == hlo && lhi1 == lhi && llo1 == llo then s1 else
   Q (hhi, hlo, lhi, llo)
 
 let inter s1 s2 =
@@ -139,8 +139,8 @@ let inter s1 s2 =
   and hlo = W.inter hlo1 hlo2
   and lhi = W.inter lhi1 lhi2
   and llo = W.inter llo1 llo2 in
-  if hhi1 == hhi && hlo1 == hlo && lhi1 == lhi && llo1 == llo then s1 else
   if hhi2 == hhi && hlo2 == hlo && lhi2 == lhi && llo2 == llo then s2 else
+  if hhi1 == hhi && hlo1 == hlo && lhi1 == lhi && llo1 == llo then s1 else
   construct hhi hlo lhi llo
 
 let diff s1 s2 =
