@@ -28,6 +28,46 @@ let () =
 
 (* -------------------------------------------------------------------------- *)
 
+(* Wrap the candidate implementation [C] with extra tests of the sharing
+   guarantees. *)
+
+module C = struct
+  include C
+
+  let add x s =
+    let s' = add x s in
+    if equal s s' then assert (s == s');
+    s'
+
+  let remove x s =
+    let s' = remove x s in
+    if equal s s' then assert (s == s');
+    s'
+
+  let union s1 s2 =
+    let s' = union s1 s2 in
+    if equal s' s2 then assert (s2 == s');
+    s'
+
+  let inter s1 s2 =
+    let s' = inter s1 s2 in
+    if equal s' s2 then assert (s2 == s');
+    s'
+
+  let diff s1 s2 =
+    let s' = diff s1 s2 in
+    if equal s' s1 then assert (s1 == s');
+    s'
+
+  let above x s =
+    let s' = above x s in
+    if equal s s' then assert (s == s');
+    s'
+
+end
+
+(* -------------------------------------------------------------------------- *)
+
 (* The abstract type [t]. *)
 
 let check _model =
