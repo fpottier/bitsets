@@ -28,23 +28,6 @@ let () =
 
 (* -------------------------------------------------------------------------- *)
 
-          let comparison_eq c1 c2 =
-            c1 < 0 && c2 < 0 || c1 = 0 && c2 = 0 || c1 > 0 && c2 > 0
-
-let () =
-  dprintf {|
-          let comparison_eq c1 c2 =
-            c1 < 0 && c2 < 0 || c1 = 0 && c2 = 0 || c1 > 0 && c2 > 0;;
-|}
-
-let comparison : (int, int) spec =
-  let equal : (int -> int -> bool) code =
-    comparison_eq, constant "comparison_eq"
-  in
-  deconstructible ~equal Print.int
-
-(* -------------------------------------------------------------------------- *)
-
 (* The abstract type [t]. *)
 
 let check _model =
