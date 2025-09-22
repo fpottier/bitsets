@@ -89,19 +89,25 @@ let union s1 s2 =
 let inter s1 s2 =
   let D (hi1, lo1) = s1
   and D (hi2, lo2) = s2 in
-  construct (W.inter hi1 hi2) (W.inter lo1 lo2)
+  let hi = W.inter hi1 hi2
+  and lo = W.inter lo1 lo2 in
+  construct hi lo
 
 let diff s1 s2 =
   let D (hi1, lo1) = s1
   and D (hi2, lo2) = s2 in
-  construct (W.diff hi1 hi2) (W.diff lo1 lo2)
+  let hi = W.diff hi1 hi2
+  and lo = W.diff lo1 lo2 in
+  construct hi lo
 
 let above x s =
   let D (hi, lo) = s in
   if x < W.bound then
-    construct hi (W.above x lo)
+    let lo' = W.above x lo in
+    construct hi lo'
   else
-    construct (W.above (x - W.bound) hi) W.empty
+    let hi' = W.above (x - W.bound) hi in
+    construct hi' W.empty
 
 (* -------------------------------------------------------------------------- *)
 
