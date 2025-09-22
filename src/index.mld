@@ -1,9 +1,11 @@
 {0 Bitsets}
 
 [bitsets] is an OCaml library that offers efficient implementations
-of several varieties of immutable bit sets.
+of several varieties of immutable bit sets and mutable bit vectors.
 
 {1 API}
+
+The following modules offer immutable bit sets:
 
 {!modules:
 Bitsets.WordBitSet
@@ -11,6 +13,12 @@ Bitsets.DWordBitSet
 Bitsets.QWordBitSet
 Bitsets.SparseBitSet
 Bitsets.BoundedBitSet
+}
+
+The following module offers mutable bit vectors:
+
+{!modules:
+Bitsets.DenseBitVector
 }
 
 {1 Installation and Usage}
