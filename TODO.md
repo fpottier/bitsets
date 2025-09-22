@@ -30,7 +30,18 @@
 
 * Move `comparison` into Monolith.
 
-* Find a way of testing `compare`.
+* Find a way of testing `compare`. It is currently not tested.
+  This seems challenging, because `compare` implements an unspecified
+  total order. The test code should construct many bit sets, perform
+  many comparisons between them, and ensure that the directed graph
+  thus obtained is acyclic. (Also, make sure that `compare` returns 0
+  if and only if its two arguments are equal; this is easy.)
+  The candidate implementation should be wrapped in a stateful
+  module which builds the directed graph and tests that it remains
+  acyclic.
+
+* Test `DenseBitVector`. It is currently not tested.
+  This should be easy though rather boring.
 
 # Extensions
 
