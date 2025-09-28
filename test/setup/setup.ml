@@ -81,20 +81,6 @@ let t =
 let elt =
   lt C.bound
 
-(* The function [prepare], which we define on both sides (reference and
-   candidate), transforms a list of sets into a a sorted list of disjoint
-   non-overlapping sets. Such a list forms a suitable argument for the
-   function [sorted_union], which we wish to test. *)
-
-(* Ideally, we should print the source code of [prepare] on the candidate
-   side, but this is a pain. Let's not do it. Thus, if a test fails, the
-   test scenario will show a call to [prepare], but the definition of
-   [prepare] will not be printed, so this scenario will not be easily
-   replayable. Never mind, for now. *)
-
-module RP = Prepare.Make(R)
-module CP = Prepare.Make(C)
-
 (* -------------------------------------------------------------------------- *)
 
 (* Declare the operations. *)
@@ -198,16 +184,8 @@ let () =
   let spec = t ^> t ^> comparison in
   declare "compare_minimum" spec R.compare_minimum C.compare_minimum;
 
-          let compose f g x = f (g x) in
-  dprintf {|
-          let compose f g x = f (g x) in
-|};
-
   let spec = list t ^> t in
-  declare "(compose sorted_union prepare)"
-    spec
-    (compose R.sorted_union RP.prepare)
-    (compose C.sorted_union CP.prepare);
+  declare "big_union" spec R.big_union C.big_union;
 
   let spec = t ^> R.nonempty % t ^> t *** t in
   declare "extract_unique_prefix" spec
