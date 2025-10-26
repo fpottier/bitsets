@@ -60,14 +60,14 @@ module type SET = sig
      then it is physically equal to [s2]. *)
   val inter: t -> t -> t
 
-  (** [diff s1 s2] is the set difference of the sets [s1] and [s2].
+  (**[diff s1 s2] is the set difference of the sets [s1] and [s2].
 
      Sharing with [s1], when possible, is guaranteed.
      That is, if the result is mathematically equal to [s1]
      then it is physically equal to [s1]. *)
   val diff: t -> t -> t
 
-  (** [above x s] is the set of the elements of [s] that are greater
+  (**[above x s] is the set of the elements of [s] that are strictly greater
       than [x].
 
      Sharing with [s], when possible, is guaranteed.
@@ -77,7 +77,7 @@ module type SET = sig
 
   (** {1 Cardinality} *)
 
-  (**[is_empty s] determines whether the [s] is empty. *)
+  (**[is_empty s] determines whether the set [s] is empty. *)
   val is_empty: t -> bool
 
   (**[is_singleton s] tests whether [s] is a singleton set. *)
@@ -117,11 +117,11 @@ module type SET = sig
 
   (** {1 Extraction} *)
 
-  (** [minimum s] returns the minimum element of the set [s].
+  (**[minimum s] returns the minimum element of the set [s].
       If the set [s] is empty, the exception [Not_found] is raised. *)
   val minimum: t -> elt
 
-  (** [maximum s] returns the maximum element of the set [s].
+  (**[maximum s] returns the maximum element of the set [s].
       If the set [s] is empty, the exception [Not_found] is raised. *)
   val maximum: t -> elt
 
@@ -148,8 +148,13 @@ module type SET = sig
      in an unspecified order. *)
   val elements: t -> elt list
 
-  (** [find_first_opt p s] returns the least element [x] of [s] such that
-      [p x] is true. It returns [None] if no such element exists. *)
+  (**[find_first_opt p s] returns the least element [x] of [s] such that
+     [p x] is true. It returns [None] if no such element exists.
+
+     FIXME: [Stdlib.Set.S] requires that [f] is monotonically increasing;
+     this permits doing binary search.
+     Either strengthen the specification or document the difference.
+  *)
   val find_first_opt: (elt -> bool) -> t -> elt option
 
   (** {1 Decomposition} *)
@@ -158,7 +163,10 @@ module type SET = sig
 
      - The empty set is less than any nonemptyset.
      - If the sets [s1] and [s2] are nonempty, then [compare_minimum s1 s2]
-       is [compare (minimum s1) (minimum s2)]. *)
+       is [compare (minimum s1) (minimum s2)].
+
+     FIXME: Isn't it a pre-order on sets rather than a total order then?
+  *)
   val compare_minimum : t -> t -> int
 
   (**[big_union ss] computes the union of the sets in the list [ss]. *)
