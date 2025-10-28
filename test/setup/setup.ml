@@ -170,6 +170,9 @@ let () =
   let spec = t ^> list elt in
   declare "elements" spec R.rev_elements C.elements;
 
+  let spec = list elt ^> t in
+  declare "of_list" spec R.of_list C.of_list;
+
   (* We test [find_first_opt] with the fixed predicate [div7]. *)
 
           let div7 x = x mod 7 = 0 in
