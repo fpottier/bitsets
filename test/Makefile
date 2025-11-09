@@ -7,6 +7,7 @@ SUBDIRS := \
   QWordBitSet \
   SparseBitSet \
   BoundedBitSet \
+  LeftistHeap \
 
 .PHONY: test
 test:
