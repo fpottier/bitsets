@@ -98,11 +98,26 @@ module R = struct
         format "(* candidate returns %s, which is not minimal *)"
           (KVPair.show kv)
 
-  (* Because [pop2] is non-deterministic, our reference implementation of
-     [pop2'] must validate and simulate the result of the candidate
-     implementation. To do so, we must check that the key-value pair [kv]
-     chosen by the candidate exists in the reference implementation and is
-     minimal. *)
+  (* [pop] is non-deterministic: when two key-value pairs have the same key,
+     either of them can be returned. Therefore our reference implementation of
+     [pop] must validate and simulate the choice that is made by the candidate
+     implementation. We check that the key-value pair [kv] chosen by the
+     candidate exists in the queue on the reference side and is minimal. *)
+
+  let pop (q : 'a t) (result : ((int * 'a) * 'a C.t) option) =
+    match result with
+    | Some (kv, _) ->
+        handle @@ fun () ->
+        let q = remove_minimal kv q in
+        valid (Some (kv, q))
+    | None ->
+        if q = [] then
+          valid None
+        else
+          invalid @@ fun _doc ->
+          format "(* candidate returns None, yet queue is nonempty *)"
+
+  (* Testing [pop2'] is analogous. *)
 
   let pop2' (q : 'a heap) (result : (int * 'a) list * 'a C.heap) =
     let kvs, _cq = result in
@@ -176,6 +191,9 @@ let () =
 
   let spec = t ^> t ^> t in
   declare "merge" spec R.merge C.merge;
+
+  let spec = t ^> nondet (option ((key *** value) *** t)) in
+  declare "pop" spec R.pop C.pop;
 
   let spec = t ^> nondet (list (key *** value) *** t) in
   declare "pop2'" spec R.pop2' C.pop2';

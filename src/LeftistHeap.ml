@@ -103,6 +103,13 @@ end) = struct
   let[@inline] insert k v t =
     merge (singleton k v) t
 
+  let pop (t : 'a heap) : ((key * 'a) * 'a heap) option =
+    match t with
+    | Leaf ->
+        None
+    | Node (l, k, v, r, _) ->
+        Some ((k, v), merge l r)
+
   type 'a pop2 =
     | Head of key * 'a * key * 'a * 'a heap
     | Tail of key * 'a
