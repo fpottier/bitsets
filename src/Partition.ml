@@ -85,15 +85,15 @@ end) = struct
   let compare_parts (_, k1) (_, k2) =
     IntSet.compare k1 k2
 
-  let rec merge accu ss v parts : sets =
+  let rec merge accu ss k parts : sets =
     match parts with
     | [] ->
         Set.big_union ss :: accu
-    | (s, v') :: parts ->
-        if IntSet.equal v v' then
-          merge accu (s :: ss) v parts
+    | (s, k') :: parts ->
+        if IntSet.equal k k' then
+          merge accu (s :: ss) k parts
         else
-          merge (Set.big_union ss :: accu) [s] v' parts
+          merge (Set.big_union ss :: accu) [s] k' parts
 
   let union_parts (parts : parts) : sets =
     match List.sort compare_parts parts with
