@@ -10,7 +10,7 @@
 (*                                                                            *)
 (******************************************************************************)
 
-module Make (Set : sig
+module[@inline] Make (Set : sig
   type t
   val is_empty : t -> bool
   val compare_minimum : t -> t -> int
