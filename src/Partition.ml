@@ -13,6 +13,7 @@
 module[@inline] Make (Set : sig
   type t
   val is_empty : t -> bool
+  val compare : t -> t -> int
   val compare_minimum : t -> t -> int
   val big_union : t list -> t
   val extract_unique_prefix : t -> t -> t * t
@@ -38,21 +39,22 @@ open H
 let[@inline] insert_if_nonempty s k heap : 'v heap =
   if nonempty s then H.insert s k heap else heap
 
-(* In the following, we choose an implementation of [IntSet] based on the
-   value of [n], which is (at most) the length of the list [ss]. Thus, if the
-   list [ss] is short enough, [IntSet] is [WordMini], which is very efficient
-   (a set is just one word). Otherwise, [IntSet] is [SparseMini]. *)
+(* A "key" is a set of small integers in the range [0, n) where [n] is (at
+   most) the length of the list [ss]. We choose an implementation of [Key]
+   based on the value of [n]. If [n] is small enough, [Key] is [WordMini],
+   which is very efficient (a set is just an integer value). Otherwise,
+   [Key] is [SparseMini]. *)
 
 (* We cannot use any of the modules [...BitSet] because that would introduce a
    cyclic dependency; these modules use [Partition.Make]. *)
 
 module Run (N : sig val n : int end) () = struct
 
-  module IntSet =
+  module Key =
     BoundedMini.Make(N)()
 
   type key =
-    IntSet.t
+    Key.t
 
   type part =
     set * key
@@ -73,8 +75,8 @@ module Run (N : sig val n : int end) () = struct
         let sc, (s1, s2) = Set.extract_shared_prefix s1 s2 in
         let parts = cons_if_nonempty sp k1 parts in
         let heap =
-          (* [insert_if_nonempty sc (IntSet.union k1 k2)] *)
-          if nonempty sc then insert sc (IntSet.union k1 k2) heap
+          (* [insert_if_nonempty sc (Key.union k1 k2)] *)
+          if nonempty sc then insert sc (Key.union k1 k2) heap
           else heap
         in
         let heap = insert_if_nonempty s1 k1 heap in
@@ -85,9 +87,9 @@ module Run (N : sig val n : int end) () = struct
     | Done ->
         parts
 
-  (* [prepare ss] builds a heap of pairs [(s, i)] where [s] ranges
-     over the nonempty sets in the list [ss] and where [i] is a
-     singleton set that contains a unique integer index. *)
+  (* [prepare ss] builds a heap of pairs [(s, k)] where [s] ranges
+     over the nonempty sets in the list [ss] and where the key [k]
+     is a singleton set that contains a unique integer index. *)
 
   let prepare (ss : sets) : key heap =
     let c = ref 0 in
@@ -96,7 +98,7 @@ module Run (N : sig val n : int end) () = struct
       if nonempty s then
         let i = !c in
         c := i + 1;
-        insert s (IntSet.singleton i) h
+        insert s (Key.singleton i) h
       else
         h
     ) empty ss
@@ -106,7 +108,7 @@ module Run (N : sig val n : int end) () = struct
      result is a list of sets. *)
 
   let by_key (_, k1) (_, k2) =
-    IntSet.compare k1 k2
+    Key.compare k1 k2
 
   let rec merge accu ss k parts : sets =
     match parts with
@@ -117,7 +119,7 @@ module Run (N : sig val n : int end) () = struct
            using [Set.union] along the way. *)
         Set.big_union ss :: accu
     | (s, k') :: parts ->
-        if IntSet.equal k k' then
+        if Key.equal k k' then
           merge accu (s :: ss) k parts
         else
           merge (Set.big_union ss :: accu) [s] k' parts
@@ -153,6 +155,15 @@ let[@inline] count_nonempty (ss : sets) : int =
   count_nonempty 0 ss
 
 let partition (ss : sets) : sets =
+  (* Remove duplicate elements in [ss].
+     This can speed up the partitioning process significantly.
+     Furthermore, it can decrease the value of [n],
+     increasing our chances of using [WordMini]. *)
+  let ss = List.sort_uniq Set.compare ss in
+  (* If the empty set was the least element in the ordering [Set.compare] then
+     we could filter it out just by testing whether the first element of the
+     list [ss] is the empty set. This is not the case, though, so we
+     explicitly filter out the empty set in [count_nonempty] and [prepare]. *)
   let module R = Run(struct let n = count_nonempty ss end)() in
   R.partition ss
 

@@ -25,6 +25,7 @@
 module Make (Set : sig
   type t
   val is_empty : t -> bool
+  val compare : t -> t -> int
   val compare_minimum : t -> t -> int
   val big_union : t list -> t
   val extract_unique_prefix : t -> t -> t * t
