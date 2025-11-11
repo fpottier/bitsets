@@ -80,18 +80,21 @@ Therefore, the reference implementation of `pop` cannot have type
 `t -> ((Key.t * Val.t) * t) option`,
 as one might expect.
 Instead, it must take two arguments,
-namely the queue on the candidate side
+namely the queue on the reference side
 and the result returned by `pop` on the candidate side.
 It is expected to return a diagnostic,
 that is,
 an indication of whether this candidate result
 is valid or invalid.
+The type `diagnostic` is defined by Monolith
+([documentation](https://cambium.inria.fr/~fpottier/monolith/doc/monolith/Monolith/#spec:fun:nondet));
+its constructors are `Valid` and `Invalid`.
 
 The reference implementation of `pop` can be written as follows:
 
 ```ocaml
   let pop (q : t) (result : ((Key.t * Val.t) * _) option)
-  : (((Key.t * Val.t) * _) option) diagnostic =
+  : (((Key.t * Val.t) * t) option) diagnostic =
     match result with
     | Some (kv, _cq) ->
         (* The candidate has extracted the key-value pair [kv] and has returned
@@ -115,12 +118,15 @@ The reference implementation of `pop` can be written as follows:
 The auxiliary function `remove_minimal kv kvs`
 ([link](https://github.com/fpottier/bitsets/blob/6b3c466701e294177a1c1a3c182ea607404f93e4/test/LeftistHeap/reference.ml#L93))
 checks that the key-value pair `kv` is a minimal element of the list `kvs` and
-returns this list deprived of this element. It fails if `kv` is not in the
+returns this list deprived of this element. It fails,
+by raising an exception,
+if `kv` is not in the
 list or not minimal.
 
 The auxiliary function `handle`
 ([link](https://github.com/fpottier/bitsets/blob/6b3c466701e294177a1c1a3c182ea607404f93e4/test/LeftistHeap/reference.ml#L106))
-handles these failures and returns an `invalid` diagnostic in these cases.
+handles the exceptions raised by `remove_minimal`
+and returns an `invalid` diagnostic in these cases.
 
 The reference implementation is now complete.
 There remains to tell Monolith about the operations
@@ -130,7 +136,8 @@ we must provide a specification
 (that is, roughly, a type),
 a reference implementation,
 and a candidate implementation.
-This is done as follows:
+This is done as follows
+([test.ml](https://github.com/fpottier/bitsets/blob/main/test/LeftistHeap/test.ml)):
 
 ```ocaml
   let spec = t in
@@ -170,7 +177,8 @@ candidate implementation:
 ```ocaml
   let pop q =
     match pop q with
-    | Some (kv, _q') ->
+    | Some (kv, q') ->
+        ignore q';
         Some (kv, q) (* return the original queue, unchanged *)
     | None ->
         None

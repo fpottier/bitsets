@@ -127,7 +127,7 @@ end) = struct
      by [pop] on the candidate side. *)
 
   let pop (q : t) (result : ((Key.t * Val.t) * _) option)
-  : (((Key.t * Val.t) * _) option) diagnostic =
+  : (((Key.t * Val.t) * t) option) diagnostic =
     match result with
     | Some (kv, _cq) ->
         (* The candidate has extracted the key-value pair [kv] and has returned
