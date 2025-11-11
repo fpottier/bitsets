@@ -64,6 +64,40 @@ module C = struct
     if equal s s' then assert (s == s');
     s'
 
+  (* To make [partition] deterministic, we sort its result with respect to the
+     lexicographic ordering on sets. *)
+
+  (* It should be possible to implement [lexico] efficiently on bit sets.
+     Let's not worry about this, for now, and use a naive implementation. *)
+
+  let rec lexico s1 s2 =
+    if is_empty s1 then -1 else
+    if is_empty s2 then +1 else
+    let c = compare_minimum s1 s2 in
+    if c <> 0 then c else
+    let x = minimum s1 in
+    assert (x = minimum s2);
+    lexico (remove x s1) (remove x s2)
+
+  let sorted_partition xs =
+    let ys = partition xs in
+    List.sort lexico ys
+
+  let () = dprintf {|
+          let rec lexico s1 s2 =
+            if is_empty s1 then -1 else
+            if is_empty s2 then +1 else
+            let c = compare_minimum s1 s2 in
+            if c <> 0 then c else
+            let x = minimum s1 in
+            assert (x = minimum s2);
+            lexico (remove x s1) (remove x s2)
+
+          let sorted_partition xs =
+            let ys = partition xs in
+            List.sort lexico ys
+|}
+
 end
 
 (* -------------------------------------------------------------------------- *)
@@ -199,6 +233,9 @@ let () =
   declare "extract_shared_prefix" spec
     R.extract_shared_prefix
     C.extract_shared_prefix;
+
+  let spec = list t ^> list t in
+  declare "sorted_partition" spec R.sorted_partition C.sorted_partition;
 
   ()
 
