@@ -10,52 +10,168 @@
 (*                                                                            *)
 (******************************************************************************)
 
-(* This reference implementation uses a sorted list of key-value pairs. *)
+(* This is a reference implementation of an immutable priority queue.
+   It uses an unsorted list of key-value pairs. *)
 
-module Make (Key : sig
+(* One could use a sorted list and exploit the fact that the list is sorted to
+   speed up [remove] and [is_minimal]. In terms of efficiency, this would not
+   make much of a difference. It is preferable to make this implementation as
+   simple as possible. *)
+
+module Make
+(Key : sig
   type t
   val compare: t -> t -> int
+  val show: t -> string
+end)
+(Val : sig
+  type t
+  val compare: t -> t -> int
+  val show: t -> string
 end) = struct
 
-  type key =
-    Key.t
+  module KeyValPair = struct
+    type t =
+      Key.t * Val.t
+    (* [equal] requires equality of keys and equality of values. *)
+    let equal (k, v) (k', v') =
+      Key.compare k k' = 0 && Val.compare v v'= 0
+    let show (k, v) =
+      Printf.sprintf "(%s, %s)" (Key.show k) (Val.show v)
+    (* [leq] compares just the keys, not the values. *)
+    let leq (k, _) (k', _) =
+      Key.compare k k' <= 0
+  end
 
-  type 'a heap =
-    (key * 'a) list
+  type heap =
+    (Key.t * Val.t) list
 
-  type 'a t =
-    'a heap
-
-  let compare_pairs (k1, _) (k2, _) =
-    Key.compare k1 k2
-
-  let sort kvs =
-    List.sort compare_pairs kvs
-
-  let empty =
+  let empty : heap =
     []
 
-  let singleton k v =
+  let singleton k v : heap =
     [(k, v)]
 
-  let merge q1 q2 =
-    sort (q1 @ q2)
+  let merge q1 q2 : heap =
+    q1 @ q2
 
-  let insert k v q =
-    sort ((k, v) :: q)
+  let insert k v q : heap =
+    (k, v) :: q
 
-  type 'a pop2 =
-    | Head of key * 'a * key * 'a * 'a heap
-    | Tail of key * 'a
-    | Done
+  (* [remove kv kvs] removes the key-value pair [kv] from the list [kvs].
+     If [kv] does not appear in the list [kvs], [Absent kv] is raised. *)
 
-  let pop2 q =
-    match q with
-    | (k1, v1) :: (k2, v2) :: q ->
-        Head (k1, v1, k2, v2, q)
-    | [(k, v)] ->
-        Tail (k, v)
+  exception Absent of KeyValPair.t
+
+  let rec remove kv kvs =
+    match kvs with
     | [] ->
-        Done
+        raise (Absent kv)
+    | kv' :: kvs ->
+        if KeyValPair.equal kv kv' then kvs else kv' :: remove kv kvs
+
+  (* [is_minimal kv kvs] tests whether the key-value pair [kv] is minimal with
+     respect to the list [kvs], that is, whether every key-value pair [kv'] in
+     the list satisfies [leq kv kv']. *)
+
+  let is_minimal kv kvs =
+    List.for_all (KeyValPair.leq kv) kvs
+
+  (* [check_minimal kv kvs] checks that the key-value pair [kv] is minimal
+     with respect to the list [kvs]. If this is not the case, [NotMinimal kv]
+     is raised. *)
+
+  exception NotMinimal of KeyValPair.t
+
+  let check_minimal kv kvs =
+    if not (is_minimal kv kvs) then
+      raise (NotMinimal kv)
+
+  (* [remove_minimal kv kvs] checks that [kv] is a minimal element of the list
+     [kvs] and returns this list deprived of this element. *)
+
+  let remove_minimal kv kvs =
+    let kvs' = remove kv kvs in (* may raise [Absent] *)
+    check_minimal kv kvs;       (* may raise [NotMinimal] *)
+    kvs'
+
+  (* [handle action] runs [action()] and handles the exceptions [Absent] and
+     [NotMinimal] by returning an [Invalid] diagnostic. *)
+
+  let format = PPrint.utf8format
+  open Monolith
+  let valid x = Valid x
+  let invalid f = Invalid f
+
+  let handle (action : unit -> 'a diagnostic) : 'a diagnostic =
+    try
+      action()
+    with
+    | Absent kv ->
+        invalid @@ fun _doc ->
+        format "(* candidate returns %s, which does not exist *)"
+          (KeyValPair.show kv)
+    | NotMinimal kv ->
+        invalid @@ fun _doc ->
+        format "(* candidate returns %s, which is not minimal *)"
+          (KeyValPair.show kv)
+
+  (* [pop] is non-deterministic: if the queue contains several minimal key-value
+     pairs, then any of them can be returned. In such a situation, the candidate
+     implementation of [pop] makes a choice. The reference implementation of
+     [pop] cannot also make a choice: if it did, the two choices might be
+     different, and the candidate and the reference might become out of sync.
+     Instead, the reference implementation of [pop] must validate and simulate
+     the choice that is made by the candidate implementation. In addition to the
+     reference queue [q], as an extra argument, it receives the result returned
+     by [pop] on the candidate side. *)
+
+  let pop (q : heap) (result : ((Key.t * Val.t) * _) option) =
+    match result with
+    | Some (kv, _cq) ->
+        (* The candidate has extracted the key-value pair [kv] and has returned
+           a candidate queue [_cq] that we cannot inspect, as it is an abstract
+           data structure. Fortunately, there is no need to inspect it. *)
+        (* Check that the key-value pair [kv] chosen by the candidate is a
+           minimal element of the queue [q], and return [q] minus [kv]. *)
+        handle @@ fun () ->
+        let q = remove_minimal kv q in
+        valid (Some (kv, q))
+    | None ->
+        (* The candidate has returned [None]. Check that the reference queue [q]
+           is empty; if it isn't, fail. *)
+        if q = [] then
+          valid None
+        else
+          invalid @@ fun _doc ->
+          format "(* candidate returns None, yet queue is nonempty *)"
+
+  (* Testing [pop2'] is analogous. *)
+
+  let pop2' (q : heap) (result : (Key.t * Val.t) list * _) =
+    let kvs, _cq = result in
+    match kvs with
+    | [kv1; kv2] ->
+        handle @@ fun () ->
+        let q = remove_minimal kv1 q in
+        let q = remove_minimal kv2 q in
+        valid (kvs, q)
+    | [kv1] ->
+        handle @@ fun () ->
+        let q = remove_minimal kv1 q in
+        if q = [] then
+          valid (kvs, q)
+        else
+          invalid @@ fun _doc ->
+          format "(* candidate returns only one element; there are more *)"
+    | [] ->
+        if q = [] then
+          valid (kvs, q)
+        else
+          invalid @@ fun _doc ->
+          format "(* candidate returns zero element; there are some *)"
+    | _ ->
+        (* [pop2'] never returns more than two elements *)
+        assert false
 
 end
