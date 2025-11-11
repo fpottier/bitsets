@@ -43,19 +43,19 @@ end) = struct
       Key.compare k k' <= 0
   end
 
-  type heap =
+  type t =
     (Key.t * Val.t) list
 
-  let empty : heap =
+  let empty : t =
     []
 
-  let singleton k v : heap =
+  let singleton k v : t =
     [(k, v)]
 
-  let merge q1 q2 : heap =
+  let merge q1 q2 : t =
     q1 @ q2
 
-  let insert k v q : heap =
+  let insert k v q : t =
     (k, v) :: q
 
   (* [remove kv kvs] removes the key-value pair [kv] from the list [kvs].
@@ -126,7 +126,8 @@ end) = struct
      reference queue [q], as an extra argument, it receives the result returned
      by [pop] on the candidate side. *)
 
-  let pop (q : heap) (result : ((Key.t * Val.t) * _) option) =
+  let pop (q : t) (result : ((Key.t * Val.t) * _) option)
+  : (((Key.t * Val.t) * _) option) diagnostic =
     match result with
     | Some (kv, _cq) ->
         (* The candidate has extracted the key-value pair [kv] and has returned
@@ -148,7 +149,8 @@ end) = struct
 
   (* Testing [pop2'] is analogous. *)
 
-  let pop2' (q : heap) (result : (Key.t * Val.t) list * _) =
+  let pop2' (q : t) (result : (Key.t * Val.t) list * _)
+  : ((Key.t * Val.t) list * t) diagnostic =
     let kvs, _cq = result in
     match kvs with
     | [kv1; kv2] ->
