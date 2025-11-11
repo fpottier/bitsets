@@ -8,9 +8,6 @@
 (*                                                                            *)
 (******************************************************************************)
 
-module IntSet =
-  SparseMini
-
 module Make (Set : sig
   type t
   val is_empty : t -> bool
@@ -20,18 +17,37 @@ module Make (Set : sig
   val extract_shared_prefix : t -> t -> t * (t * t)
 end) = struct
 
-  type set =
-    Set.t
+type set =
+  Set.t
 
-  type sets =
-    set list
+type sets =
+  set list
 
-  module H =
-    LeftistHeap.Make(struct
-      type t = Set.t
-      let compare = Set.compare_minimum
-    end)
-  open H
+let[@inline] nonempty (s : set) =
+  not (Set.is_empty s)
+
+module H =
+  LeftistHeap.Make(struct
+    type t = Set.t
+    let compare = Set.compare_minimum
+  end)
+open H
+
+let[@inline] insert_if_nonempty s k heap : 'v heap =
+  if nonempty s then H.insert s k heap else heap
+
+(* In the following, we choose an implementation of [IntSet] based on the
+   value of [n], which is (at most) the length of the list [ss]. Thus, if the
+   list [ss] is short enough, [IntSet] is [WordMini], which is very efficient
+   (a set is just one word). Otherwise, [IntSet] is [SparseMini]. *)
+
+(* We cannot use any of the modules [...BitSet] because that would introduce a
+   cyclic dependency; these modules use [Partition.Make]. *)
+
+module Run (N : sig val n : int end) () = struct
+
+  module IntSet =
+    BoundedMini.Make(N)()
 
   type key =
     IntSet.t
@@ -42,14 +58,8 @@ end) = struct
   type parts =
     part list
 
-  let[@inline] nonempty s =
-    not (Set.is_empty s)
-
   let[@inline] cons_if_nonempty s k parts : parts =
     if nonempty s then (s, k) :: parts else parts
-
-  let[@inline] insert_if_nonempty s k heap : 'v heap =
-    if nonempty s then H.insert s k heap else heap
 
   (* [loop] grows the list [parts] by extracting pairs [(s, k)] out of
      the priority queue [heap]. A better comment would be desirable! *)
@@ -125,4 +135,23 @@ end) = struct
     |> loop []
     |> union_parts
 
-end
+end (* Run *)
+
+(* [count_nonempty ss] counts the nonempty sets in the list [ss]. *)
+
+let rec count_nonempty accu (ss : sets) : int =
+  match ss with
+  | [] ->
+      accu
+  | s :: ss ->
+      let accu = if nonempty s then accu + 1 else accu in
+      count_nonempty accu ss
+
+let[@inline] count_nonempty (ss : sets) : int =
+  count_nonempty 0 ss
+
+let partition (ss : sets) : sets =
+  let module R = Run(struct let n = count_nonempty ss end)() in
+  R.partition ss
+
+end (* Make *)
