@@ -33,8 +33,11 @@ end) = struct
     end)
   open H
 
+  type key =
+    IntSet.t
+
   type part =
-    set * IntSet.t
+    set * key
 
   type parts =
     part list
@@ -48,7 +51,10 @@ end) = struct
   let[@inline] insert_if_nonempty s k heap : 'v heap =
     if nonempty s then H.insert s k heap else heap
 
-  let rec aux (parts : parts) (heap : IntSet.t heap) : parts =
+  (* [loop] grows the list [parts] by extracting pairs [(s, k)] out of
+     the priority queue [heap]. A better comment would be desirable! *)
+
+  let rec loop (parts : parts) (heap : key heap) : parts =
     match pop2 heap with
     | Head (s1, k1, s2, k2, heap) ->
         let sp, s1 = Set.extract_unique_prefix s1 s2 in
@@ -61,33 +67,42 @@ end) = struct
         in
         let heap = insert_if_nonempty s1 k1 heap in
         let heap = insert_if_nonempty s2 k2 heap in
-        aux parts heap
+        loop parts heap
     | Tail (k, v) ->
         (k, v) :: parts
     | Done ->
         parts
 
-  let compute_parts (ss : sets) : parts =
-    let c = ref 0 in
-    let heap =
-      List.fold_left (fun h (s : set) ->
-        (* Any empty sets in the list [ss] are ignored on the fly. *)
-        if nonempty s then
-          let i = !c in
-          c := i + 1;
-          insert s (IntSet.singleton i) h
-        else
-          h
-      ) empty ss
-    in
-    aux [] heap
+  (* [prepare ss] builds a heap of pairs [(s, i)] where [s] ranges
+     over the nonempty sets in the list [ss] and where [i] is a
+     singleton set that contains a unique integer index. *)
 
-  let compare_parts (_, k1) (_, k2) =
+  let prepare (ss : sets) : key heap =
+    let c = ref 0 in
+    List.fold_left (fun h (s : set) ->
+      (* Any empty sets in the list [ss] are ignored on the fly. *)
+      if nonempty s then
+        let i = !c in
+        c := i + 1;
+        insert s (IntSet.singleton i) h
+      else
+        h
+    ) empty ss
+
+  (* [union_parts] expects a list of pairs [(s, k)] where [s] is a set and [k]
+     is a key. It finds all sets that have a common key and fuses them. The
+     result is a list of sets. *)
+
+  let by_key (_, k1) (_, k2) =
     IntSet.compare k1 k2
 
   let rec merge accu ss k parts : sets =
     match parts with
     | [] ->
+        (* [merge] intentionally uses an accumulator [ss] of type [set list],
+           as opposed to just [set]. Indeed, it can be more efficient to use
+           [Set.big_union] just once at the end, as opposed to repeatedly
+           using [Set.union] along the way. *)
         Set.big_union ss :: accu
     | (s, k') :: parts ->
         if IntSet.equal k k' then
@@ -96,15 +111,18 @@ end) = struct
           merge (Set.big_union ss :: accu) [s] k' parts
 
   let union_parts (parts : parts) : sets =
-    match List.sort compare_parts parts with
+    (* Sort the pairs [(s, k)] by key. *)
+    match List.sort by_key parts with
     | [] ->
         []
     | (s1, k1) :: parts ->
+        (* Merge the sets that have the same key. *)
         merge [] [s1] k1 parts
 
   let partition ss =
     ss
-    |> compute_parts
+    |> prepare
+    |> loop []
     |> union_parts
 
 end
