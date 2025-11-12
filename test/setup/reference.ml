@@ -76,26 +76,6 @@ let extract_shared_prefix s1 s2 =
   let head = shared_prefix s1 s2 in
   head, (diff s1 head, diff s2 head)
 
-let rec uniq1 cmp x ys =
-  match ys with
-  | [] ->
-      []
-  | y :: ys ->
-      if cmp x y = 0 then
-        uniq1 cmp x ys
-      else
-        y :: uniq1 cmp y ys
-
-(**[uniq cmp xs] assumes that the list [xs] is sorted according to the
-   ordering [cmp] and returns the list [xs] deprived of any duplicate
-   elements. *)
-let uniq cmp xs =
-  match xs with
-  | [] ->
-      []
-  | x :: xs ->
-      x :: uniq1 cmp x xs
-
 (* A naïve implementation of [partition]. *)
 
 let rec partition xs =
@@ -109,10 +89,8 @@ let rec partition xs =
       |> List.map (fun y -> [inter y x; diff y x]) |> List.flatten
       (* Eliminate all empty sets. *)
       |> List.filter nonempty
-      (* Sort the list by minimum elements. *)
-      |> List.sort compare_minimum
-      (* Remove duplicate elements (which must be adjacent). *)
-      |> uniq compare
+      (* Sort the list and remove duplicate elements. *)
+      |> List.sort_uniq compare
 
 (* To make [partition] deterministic, we sort its result with respect to the
    lexicographic ordering on sets, which (in this reference implementation) is
