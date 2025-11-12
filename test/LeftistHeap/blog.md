@@ -44,7 +44,7 @@ Monolith expects us to provide a reference implementation of a priority queue.
 This reference implementation does not need to be very efficient; what matters
 is that it should be simple and correct. The simplest possible approach is to
 use an unsorted list of key-value pairs, along the following lines
-([reference.ml](https://github.com/fpottier/bitsets/blob/b27da071b117bf70916207aee93c86694e757f09/test/LeftistHeap/reference.ml#L46))
+([reference.ml](https://github.com/fpottier/bitsets/blob/8fc708ffdf095bec0a8017dead4bd56fed13b204/test/LeftistHeap/reference.ml#L46))
 :
 
 ```ocaml
@@ -90,7 +90,8 @@ The type `diagnostic` is defined by Monolith
 ([documentation](https://cambium.inria.fr/~fpottier/monolith/doc/monolith/Monolith/#spec:fun:nondet));
 its constructors are `Valid` and `Invalid`.
 
-The reference implementation of `pop` can be written as follows:
+The reference implementation of `pop` can be written as follows
+([link](https://github.com/fpottier/bitsets/blob/f049d28fea7111a0b812ab6abd9a82abd81f153a/test/LeftistHeap/reference.ml#L129)):
 
 ```ocaml
   let pop (q : t) (result : ((Key.t * Val.t) * _) option)
@@ -116,7 +117,7 @@ The reference implementation of `pop` can be written as follows:
 ```
 
 The auxiliary function `remove_minimal kv kvs`
-([link](https://github.com/fpottier/bitsets/blob/6b3c466701e294177a1c1a3c182ea607404f93e4/test/LeftistHeap/reference.ml#L93))
+([link](https://github.com/fpottier/bitsets/blob/f049d28fea7111a0b812ab6abd9a82abd81f153a/test/LeftistHeap/reference.ml#L93))
 checks that the key-value pair `kv` is a minimal element of the list `kvs` and
 returns this list deprived of this element. It fails,
 by raising an exception,
@@ -124,7 +125,7 @@ if `kv` is not in the
 list or not minimal.
 
 The auxiliary function `handle`
-([link](https://github.com/fpottier/bitsets/blob/6b3c466701e294177a1c1a3c182ea607404f93e4/test/LeftistHeap/reference.ml#L106))
+([link](https://github.com/fpottier/bitsets/blob/f049d28fea7111a0b812ab6abd9a82abd81f153a/test/LeftistHeap/reference.ml#L106))
 handles the exceptions raised by `remove_minimal`
 and returns an `invalid` diagnostic in these cases.
 
@@ -197,6 +198,6 @@ Then, the test immediately fails and prints the following scenario:
           (* candidate returns (6, 11), which does not exist *)
 ```
 
-As you can see, the priority queue returned by the first `pop` operation is
-extracted: it is named `x1` and it is submitted to a second `pop` operation,
+The priority queue returned by the first `pop` operation is
+extracted, named `x1`, and submitted to a second `pop` operation,
 where an observable problem appears.
